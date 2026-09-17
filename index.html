@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Wolf</title>
+<meta name="theme-color" content="#141210">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Wolf">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="img/icon-180.png">
+<link rel="icon" href="img/icon-180.png">
+<link rel="preload" href="fonts/fraunces-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/archivo-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<!--
+THESIS: One wolf, one number, one streak. The home screen is the animal and how he is doing; everything else is one tap away. Refuses the dashboard and the wall of words.
+OWN-WORLD: Warm brown plates with amber light smeared sideways, bone type, one golden accent, live film grain. Fraunces for the numbers, Archivo for everything else. Ten photographic stages of the same wolf.
+STORY: He opens it, sees the wolf, ticks the day, checks in at night, gets a line back, keeps the streak.
+FIRST VIEWPORT: 390 by 844. Streak top right in golden. The wolf fills the top half over the dark plate. Under it the percentage in Fraunces, a golden bar, the stage name, one line. Tab bar on the safe area.
+FORM: Home / Habits / Brain / Calendar. The user dictated this structure screen by screen on 2026-09-16, which supersedes the v1 roll (seed 7358d6f0).
+FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
+-->
+<canvas id="grain" aria-hidden="true"></canvas>
+<div class="plate" id="plate" aria-hidden="true"></div>
+
+<header class="top">
+  <div class="top-left" id="topLeft"></div>
+  <div class="top-right">
+    <button class="streak" id="streakBtn" aria-label="Streak">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2.5c1 2.5 4 4 4 8a4 4 0 0 1-8 0c0-1.6.7-2.6 1.5-3.5.3 1.2 1 1.8 1.8 2 .2-2.4-.3-4.5.7-6.5z"/></svg>
+      <span id="streakNum">0</span>
+    </button>
+    <button class="icon-btn" id="btnSettings" aria-label="Settings">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="2.6"/><path d="M10 2.5v2M10 15.5v2M2.5 10h2M15.5 10h2M4.7 4.7l1.4 1.4M13.9 13.9l1.4 1.4M4.7 15.3l1.4-1.4M13.9 6.1l1.4-1.4"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- HOME -->
+  <section class="view home" id="view-home">
+    <div class="hero">
+      <div class="stage-art" id="wolfArt"><img class="a" alt=""><img class="b" alt="The wolf"></div>
+    </div>
+    <div class="score">
+      <div class="pct"><span id="wolfPct">50</span><span class="pct-sign">%</span></div>
+      <div class="bar"><i id="wolfBar" style="width:50%"></i></div>
+      <p class="stage-name" id="wolfStage">Normal</p>
+      <p class="stage-line" id="wolfLine"></p>
+    </div>
+    <button class="btn primary wide" id="btnTonight" hidden>Check in for tonight</button>
+    <p class="mini" id="homeMini"></p>
+    <div class="hgrid-wrap">
+      <h2 class="h">Habits</h2>
+      <div class="hgrid" id="hgrid"></div>
+    </div>
+  </section>
+
+  <!-- HABITS -->
+  <section class="view" id="view-habits" hidden>
+    <div class="daynav">
+      <button class="nav-btn" id="prevDay" aria-label="Previous day"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 4.5 7 10l5.5 5.5"/></svg></button>
+      <div class="daylabel"><span class="daynum" id="hDay">Day 1</span><span class="daydate" id="hDate"></span></div>
+      <button class="nav-btn" id="nextDay" aria-label="Next day"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 4.5 13 10l-5.5 5.5"/></svg></button>
+    </div>
+    <div class="daysum"><span id="hDone">0 of 11</span><div class="bar small"><i id="hBar" style="width:0%"></i></div></div>
+    <div class="habits" id="habitList"></div>
+    <div class="checkin" id="checkinWrap">
+      <button class="btn primary wide" id="btnCheckin">Done for tonight</button>
+      <p class="mini" id="checkinNote"></p>
+    </div>
+  </section>
+
+  <!-- BRAIN -->
+  <section class="view home" id="view-brain" hidden>
+    <div class="hero">
+      <div class="stage-art" id="brainArt"><img class="a" alt=""><img class="b" alt="The brain"></div>
+    </div>
+    <div class="score">
+      <p class="stage-name" id="brainStage">Normal</p>
+      <p class="stage-line" id="brainLine"></p>
+    </div>
+    <div class="minutes">
+      <label class="field big"><span>Brainrot today</span>
+        <div class="min-row"><input type="number" id="fIg" inputmode="numeric" min="0" max="900" placeholder="0"><span class="unit">min</span></div>
+      </label>
+      <div class="trend" id="brainTrend"></div>
+      <p class="mini">Read it off Screen Time before bed. Runs on the last three days.</p>
+    </div>
+  </section>
+
+  <!-- CALENDAR -->
+  <section class="view" id="view-cal" hidden>
+    <div class="cal-head"><h2 class="cal-title" id="calTitle"></h2><p class="mini" id="calSum"></p></div>
+    <div class="cal-dow"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
+    <div class="cal" id="calGrid"></div>
+    <div class="cal-head" style="margin-top:22px"><h2 class="cal-title" id="calTitle2"></h2></div>
+    <div class="cal-dow"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
+    <div class="cal" id="calGrid2"></div>
+  </section>
+
+</main>
+
+<nav class="tabs" aria-label="Sections">
+  <button class="tab is-active" data-view="home" aria-current="page">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 16.5L3 5l5 3.5h4L17 5l-1 11.5"/><path d="M4 16.5c1.5-1.5 4-2.5 6-2.5s4.5 1 6 2.5"/><path d="M8 11.5h.01M12 11.5h.01"/></svg><span>Wolf</span>
+  </button>
+  <button class="tab" data-view="habits">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="14" height="14" rx="3"/><path d="M6.5 10.2l2.4 2.4 4.8-5"/></svg><span>Habits</span>
+  </button>
+  <button class="tab" data-view="brain">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3.5a3 3 0 0 0-3 3 3 3 0 0 0-2.5 4.5A3 3 0 0 0 7 16h6a3 3 0 0 0 2.5-5 3 3 0 0 0-2.5-4.5 3 3 0 0 0-3-3z"/><path d="M10 3.5v12.5M7 8.5c1 .5 2 .5 3 0M10 12c1-.5 2-.5 3 0"/></svg><span>Brain</span>
+  </button>
+  <button class="tab" data-view="cal">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="14" height="12.5" rx="2.5"/><path d="M3 8.5h14M7 3v3M13 3v3"/></svg><span>Calendar</span>
+  </button>
+</nav>
+
+<!-- NIGHT: message + streak -->
+<section class="night" id="night" hidden aria-label="Tonight">
+  <div class="night-inner">
+    <div class="night-num"><span id="nightStreak">1</span></div>
+    <p class="night-label" id="nightLabel">day streak</p>
+    <div class="week" id="nightWeek"></div>
+    <p class="night-msg" id="nightMsg"></p>
+    <button class="btn dark wide" id="nightClose">Sleep well</button>
+  </div>
+</section>
+
+<!-- SETTINGS -->
+<div class="scrim-layer" id="sheetScrim" hidden></div>
+<section class="sheet" id="sheet" hidden aria-label="Settings">
+  <div class="sheet-handle" aria-hidden="true"></div>
+  <h2 class="sheet-title">Sync</h2>
+  <p class="sheet-copy">Paste the GitHub token once. Your days then sync to your private repo so Claude can read them. It stays on this phone.</p>
+  <label class="field wide"><span>GitHub token</span><input type="password" id="fToken" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="github_pat_..."></label>
+  <div class="sheet-row">
+    <button class="btn primary" id="btnSaveToken">Save token</button>
+    <button class="btn" id="btnPull">Pull history</button>
+  </div>
+  <p class="sheet-status" id="syncStatus">Not connected</p>
+  <hr class="rule">
+  <p class="sheet-copy small">Ticks save on this phone instantly and sync whenever there is signal. Version <span id="ver">2.0</span>.</p>
+  <button class="btn ghost" id="btnClose">Close</button>
+</section>
+
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

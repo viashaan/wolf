@@ -69,7 +69,9 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
       <div class="daylabel"><span class="daynum" id="hDay">Day 1</span><span class="daydate" id="hDate"></span></div>
       <button class="nav-btn" id="nextDay" aria-label="Next day"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 4.5 13 10l-5.5 5.5"/></svg></button>
     </div>
-    <div class="daysum"><span id="hDone">0 of 11</span><div class="bar small"><i id="hBar" style="width:0%"></i></div></div>
+    <div class="daysum"><span id="hDone">0 of 11</span><div class="bar small"><i id="hBar" style="width:0%"></i></div>
+      <button class="icon-btn small" id="btnCal" aria-label="Calendar"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="14" height="12.5" rx="2.5"/><path d="M3 8.5h14M7 3v3M13 3v3"/></svg></button>
+    </div>
     <div class="habits" id="habitList"></div>
     <div class="checkin" id="checkinWrap">
       <button class="btn primary wide" id="btnCheckin">Done for tonight</button>
@@ -87,23 +89,17 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
       <p class="stage-line" id="brainLine"></p>
     </div>
     <div class="minutes">
-      <label class="field big"><span>Brainrot today</span>
-        <div class="min-row"><input type="number" id="fIg" inputmode="numeric" min="0" max="900" placeholder="0"><span class="unit">min</span></div>
-      </label>
+      <div class="min-row"><span class="min-big" id="brainAvg">–</span><span class="unit">min a day, 7-day average</span></div>
       <div class="trend" id="brainTrend"></div>
-      <p class="mini">Read it off Screen Time before bed. Runs on the last three days.</p>
+      <p class="mini">Enter each day's minutes on the Habits page. This is the average.</p>
     </div>
   </section>
 
-  <!-- CALENDAR -->
-  <section class="view" id="view-cal" hidden>
-    <div class="cal-head"><h2 class="cal-title" id="calTitle"></h2><p class="mini" id="calSum"></p></div>
-    <div class="cal-dow"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
-    <div class="cal" id="calGrid"></div>
-    <div class="cal-head" style="margin-top:22px"><h2 class="cal-title" id="calTitle2"></h2></div>
-    <div class="cal-dow"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
-    <div class="cal" id="calGrid2"></div>
-  </section>
+  <!-- FOCUS -->
+  <section class="view" id="view-focus" hidden><div class="blocks" id="focusBlocks"></div></section>
+
+  <!-- INFO -->
+  <section class="view" id="view-info" hidden><div class="blocks" id="infoBlocks"></div></section>
 
 </main>
 
@@ -117,10 +113,26 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
   <button class="tab" data-view="brain">
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3.5a3 3 0 0 0-3 3 3 3 0 0 0-2.5 4.5A3 3 0 0 0 7 16h6a3 3 0 0 0 2.5-5 3 3 0 0 0-2.5-4.5 3 3 0 0 0-3-3z"/><path d="M10 3.5v12.5M7 8.5c1 .5 2 .5 3 0M10 12c1-.5 2-.5 3 0"/></svg><span>Brain</span>
   </button>
-  <button class="tab" data-view="cal">
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="14" height="12.5" rx="2.5"/><path d="M3 8.5h14M7 3v3M13 3v3"/></svg><span>Calendar</span>
+  <button class="tab" data-view="focus">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="7"/><circle cx="10" cy="10" r="3"/><path d="M10 3v2M10 15v2M3 10h2M15 10h2"/></svg><span>Focus</span>
+  </button>
+  <button class="tab" data-view="info">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="M10 9v5M10 6.5v.2"/></svg><span>Info</span>
   </button>
 </nav>
+
+<!-- CALENDAR SHEET -->
+<div class="scrim-layer" id="calScrim" hidden></div>
+<section class="sheet cal-sheet" id="calSheet" hidden aria-label="Calendar">
+  <div class="sheet-handle" aria-hidden="true"></div>
+  <div class="cal-head"><h2 class="cal-title" id="calTitle"></h2><p class="mini" id="calSum"></p></div>
+  <div class="cal-dow"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
+  <div class="cal" id="calGrid"></div>
+  <div class="cal-head" style="margin-top:22px"><h2 class="cal-title" id="calTitle2"></h2></div>
+  <div class="cal-dow"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
+  <div class="cal" id="calGrid2"></div>
+  <button class="btn ghost" id="btnCalClose">Close</button>
+</section>
 
 <!-- NIGHT: message + streak -->
 <section class="night" id="night" hidden aria-label="Tonight">

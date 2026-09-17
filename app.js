@@ -3,7 +3,7 @@
   "use strict";
   const P = window.PLAN;
   const $ = (s) => document.querySelector(s);
-  const VERSION = "2.0";
+  const VERSION = "2.1";
   try { const qs = new URLSearchParams(location.search); if (/^\d{4}-\d{2}-\d{2}$/.test(qs.get("start") || "")) P.start = qs.get("start"); } catch {}
 
   /* ---------- dates ---------- */
@@ -31,11 +31,20 @@
 
   /* ---------- habits and scoring ---------- */
   const due = (date) => { const n = dayIndex(date); const dow = parse(date).getDay(); return P.habits.filter((h) => (!h.from || n >= h.from) && (!h.days || h.days.includes(dow))); };
+  const minutesOn = (date) => { const r = peek(date); return r && r.ig !== "" && r.ig != null ? Number(r.ig) : null; };
+  // A habit is "met" on a day: ticked, or (weekly) the trailing 7 days already hit the target, or (minutes) under the limit.
+  function metOn(h, date) {
+    const r = peek(date);
+    if (h.minutes) { const m = minutesOn(date); return m != null && m <= h.limit; }
+    if (r && r.done[h.id]) return true;
+    if (h.weekly) { let c = 0; for (let i = 0; i < 7; i++) { const x = peek(addDays(date, -i)); if (x && x.done[h.id]) c++; } return c >= h.weekly; }
+    return false;
+  }
   function completion(date) {
-    const list = due(date); const r = peek(date); const d = r ? list.filter((h) => r.done[h.id]).length : 0;
+    const list = due(date); const d = list.filter((h) => metOn(h, date)).length;
     return { done: d, total: list.length, r: list.length ? d / list.length : 0 };
   }
-  const touched = (date) => { const r = peek(date); return !!r && Object.values(r.done).some(Boolean); };
+  const touched = (date) => { const r = peek(date); return !!r && (Object.values(r.done).some(Boolean) || minutesOn(date) != null); };
   // 7-day mean. Days before day 1 count as the prior (0.5) so he starts at "Normal".
   // Today joins only once something is ticked, so a fresh morning never reads as a zero day.
   function wolfScore() {
@@ -49,12 +58,9 @@
   }
   const stageOf = (score) => Math.min(10, Math.max(1, Math.round(score * 10)));
   function brainMinutes() {
-    const t = today(); const w = [3, 2, 1]; let num = 0, den = 0; const vals = [];
-    for (let i = 0; i < P.brain.window; i++) {
-      const d = addDays(t, -i); const r = peek(d); const v = r && r.ig !== "" && r.ig != null ? Number(r.ig) : null;
-      vals.push({ date: d, v }); if (v != null) { num += v * w[i]; den += w[i]; }
-    }
-    return { minutes: den ? num / den : null, vals };
+    const t = today(); let sum = 0, n = 0; const vals = [];
+    for (let i = P.brain.window - 1; i >= 0; i--) { const d = addDays(t, -i); const v = minutesOn(d); vals.push({ date: d, v }); if (v != null) { sum += v; n++; } }
+    return { minutes: n ? sum / n : null, vals };
   }
   const brainStage = (m) => m == null ? 5 : Math.min(10, Math.max(1, Math.round(10 - m / (P.brain.minutesForDead / 10))));
   // Consecutive checked-in nights ending today (or yesterday if tonight is still open).
@@ -88,22 +94,25 @@
   const stageLine = (n) => n <= 2 ? "Get him up. Sunlight and water." : n <= 4 ? "Coming back. Keep ticking." : n === 5 ? "Holding steady." : n <= 7 ? "Getting there." : n <= 9 ? "Strong. Do not let up." : "Apex. Keep it exactly like this.";
 
   /* ---------- icons ---------- */
+  // Solid icon set (fill). tick and chev stay as strokes.
   const I = {
-    sunrise: '<path d="M3 15h14M5.5 12a4.5 4.5 0 0 1 9 0M10 3v3M4.2 6.2l1.4 1.4M15.8 6.2l-1.4 1.4"/>',
-    sun: '<circle cx="10" cy="10" r="3.2"/><path d="M10 2.5v2M10 15.5v2M2.5 10h2M15.5 10h2M4.7 4.7l1.4 1.4M13.9 13.9l1.4 1.4M4.7 15.3l1.4-1.4M13.9 6.1l1.4-1.4"/>',
-    drop: '<path d="M10 3c3 3.6 5 6.2 5 8.7a5 5 0 0 1-10 0C5 9.2 7 6.6 10 3z"/>',
-    pill: '<rect x="3" y="7" width="14" height="6" rx="3" transform="rotate(-35 10 10)"/><path d="M8.2 6.2l3.6 5.2"/>',
-    egg: '<path d="M10 3c3 0 5.5 4.2 5.5 8a5.5 5.5 0 0 1-11 0C4.5 7.2 7 3 10 3z"/>',
-    cup: '<path d="M4 7h9v5.5a3.5 3.5 0 0 1-3.5 3.5h-2A3.5 3.5 0 0 1 4 12.5V7zM13 8.5h1.5a2 2 0 0 1 0 4H13"/>',
-    cupoff: '<path d="M4 7h9v5.5a3.5 3.5 0 0 1-3.5 3.5h-2A3.5 3.5 0 0 1 4 12.5V7zM13 8.5h1.5a2 2 0 0 1 0 4H13M3 17L17 3"/>',
-    leafoff: '<path d="M16 4c-6 0-10 3-10 9 0 1 .2 2 .6 3C11.5 16 15 12 16 4zM6.6 16C8 12.5 10 10 13 8M3 17L17 3"/>',
-    dumbbell: '<path d="M6.5 10h7M3 8v4M17 8v4M5 6.5v7M15 6.5v7"/>',
-    phoneoff: '<rect x="6" y="2.5" width="8" height="15" rx="2"/><path d="M9 15h2M3 17L17 3"/>',
-    moon: '<path d="M15.5 12.5A6 6 0 0 1 7.5 4.5a6 6 0 1 0 8 8z"/>',
+    sunrise: '<path d="M5.2 12.5a4.8 4.8 0 0 1 9.6 0z"/><path d="M2.5 15h15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/><path d="M10 2.6v2.6M4 6.2l1.8 1.8M16 6.2l-1.8 1.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/>',
+    sun: '<circle cx="10" cy="10" r="4"/><path d="M10 2v2.2M10 15.8V18M2 10h2.2M15.8 10H18M4.3 4.3l1.6 1.6M14.1 14.1l1.6 1.6M4.3 15.7l1.6-1.6M14.1 5.9l1.6-1.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/>',
+    drop: '<path d="M10 2.5c3.2 3.8 5.3 6.6 5.3 9.3a5.3 5.3 0 0 1-10.6 0C4.7 9.1 6.8 6.3 10 2.5z"/>',
+    egg: '<path d="M10 2.5c3.2 0 5.8 4.5 5.8 8.4a5.8 5.8 0 0 1-11.6 0C4.2 7 6.8 2.5 10 2.5z"/>',
+    pill: '<rect x="2.5" y="6.8" width="15" height="6.4" rx="3.2" transform="rotate(-35 10 10)"/><path d="M8 6l4 5.8" stroke="#141210" stroke-width="1.6" stroke-linecap="round"/>',
+    cup: '<path d="M3.5 6.5h10v6a3.5 3.5 0 0 1-3.5 3.5H7a3.5 3.5 0 0 1-3.5-3.5v-6z"/><path d="M13.5 8h1.3a2.2 2.2 0 0 1 0 4.4h-1.3" stroke="currentColor" stroke-width="1.8" fill="none"/>',
+    cupoff: '<path d="M3.5 6.5h10v6a3.5 3.5 0 0 1-3.5 3.5H7a3.5 3.5 0 0 1-3.5-3.5v-6z"/><path d="M13.5 8h1.3a2.2 2.2 0 0 1 0 4.4h-1.3" stroke="currentColor" stroke-width="1.8" fill="none"/><path d="M2.5 17.5l15-15" stroke="#141210" stroke-width="3.4" stroke-linecap="round"/><path d="M2.5 17.5l15-15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+    leafoff: '<path d="M16.5 3.5c-7 0-11 3.5-11 9.5 0 1.3.3 2.4.8 3.3C12 15.5 16 11.5 16.5 3.5z"/><path d="M2.5 17.5l15-15" stroke="#141210" stroke-width="3.4" stroke-linecap="round"/><path d="M2.5 17.5l15-15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+    dumbbell: '<rect x="6.5" y="9" width="7" height="2"/><rect x="4" y="6" width="2.6" height="8" rx="1"/><rect x="13.4" y="6" width="2.6" height="8" rx="1"/><rect x="2" y="8" width="1.6" height="4" rx=".8"/><rect x="16.4" y="8" width="1.6" height="4" rx=".8"/>',
+    phoneoff: '<rect x="5.5" y="2" width="9" height="16" rx="2.2"/><rect x="8.5" y="14.6" width="3" height="1.2" rx=".6" fill="#141210"/><path d="M2.5 17.5l15-15" stroke="#141210" stroke-width="3.4" stroke-linecap="round"/><path d="M2.5 17.5l15-15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+    brain: '<path d="M9.3 3a3 3 0 0 0-2.9 2.2A3 3 0 0 0 4 9.6a3 3 0 0 0 1.4 4.7A3 3 0 0 0 9.3 17h.4V3zM10.7 3v14h.4a3 3 0 0 0 3.9-2.7A3 3 0 0 0 16 9.6a3 3 0 0 0-2.4-4.4A3 3 0 0 0 10.7 3z"/>',
+    moon: '<path d="M16 12.6A6.6 6.6 0 0 1 7.4 4a6.6 6.6 0 1 0 8.6 8.6z"/>',
     tick: '<path d="M3 8.6l3.1 3.1L13 4.9"/>',
     chev: '<path d="M4.5 7.5L10 13l5.5-5.5"/>'
   };
-  const svg = (k, vb = 20, sw = 1.5) => `<svg viewBox="0 0 ${vb} ${vb}" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[k]}</svg>`;
+  const STROKE = new Set(["tick", "chev"]);
+  const svg = (k, vb = 20, sw = 1.5) => STROKE.has(k) ? `<svg viewBox="0 0 ${vb} ${vb}" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[k]}</svg>` : `<svg viewBox="0 0 ${vb} ${vb}" fill="currentColor" aria-hidden="true">${I[k]}</svg>`;
 
   /* ---------- art crossfade ---------- */
   const shownStage = { wolf: 0, brain: 0 };
@@ -124,11 +133,11 @@
     for (let date = P.start; date <= t; date = addDays(date, 1)) {
       if (date === t && !touched(t)) continue;
       const h = due(date).find((x) => x.id === id); if (!h) continue;
-      n++; const r = peek(date); if (r && r.done[id]) d++;
+      n++; if (metOn(h, date)) d++;
     }
     return n ? d / n : null;
   }
-  const short = { wake: "Up", sun: "Sun", water: "Water", vits: "Vits", breakfast: "Food", coffee11: "Coffee", caff: "Caffeine", nic: "Nicotine", gym: "Gym", phone: "Phone", bed: "Bed" };
+  const short = { wake: "Up", sun: "Sun", water: "Water", vits: "Vits", breakfast: "Food", coffee11: "Coffee", caff: "Caffeine", nic: "Nicotine", gym: "Gym", phone: "Phone", brainrot: "Brainrot", bed: "Bed" };
   function renderGrid() {
     const host = $("#hgrid"); host.innerHTML = "";
     P.habits.forEach((h) => {
@@ -173,14 +182,16 @@
     $("#hDone").textContent = `${c.done} of ${c.total}`; $("#hBar").style.width = Math.round(c.r * 100) + "%";
     const host = $("#habitList"); const openIds = new Set([...host.querySelectorAll(".habit.open")].map((e) => e.dataset.id)); host.innerHTML = "";
     list.forEach((h) => {
-      const el = document.createElement("div"); el.className = "habit" + (r.done[h.id] ? " done" : "") + (openIds.has(h.id) ? " open" : ""); el.dataset.id = h.id;
+      const met = metOn(h, d);
+      const el = document.createElement("div"); el.className = "habit" + (met ? " done" : "") + (openIds.has(h.id) ? " open" : ""); el.dataset.id = h.id;
       const time = h.time && r.times[h.id] ? `<span class="h-time">${r.times[h.id]}</span>` : "";
+      const right = h.minutes ? `<input type="number" class="h-min" data-min="1" inputmode="numeric" min="0" max="900" placeholder="min" value="${r.ig ?? ""}" aria-label="Minutes">` : `<span class="h-box">${svg("tick", 16, 2.4)}</span>`;
       el.innerHTML = `<div class="habit-head">
-          <button type="button" class="habit-row" data-act="toggle" aria-pressed="${r.done[h.id] ? "true" : "false"}">
+          <${h.minutes ? "div" : "button type=\"button\""} class="habit-row" ${h.minutes ? "" : `data-act="toggle" aria-pressed="${r.done[h.id] ? "true" : "false"}"`}>
             <span class="h-icon">${svg(h.icon)}</span>
             <span class="h-text"><span class="h-label">${h.label}</span>${time}</span>
-            <span class="h-box">${svg("tick", 16, 2.4)}</span>
-          </button>
+            ${right}
+          </${h.minutes ? "div" : "button"}>
           <button type="button" class="h-more" data-act="more" aria-label="Details">${svg("chev", 20, 1.6)}</button>
         </div>
         <div class="h-detail">${h.why ? `<span>${h.why}</span>` : ""}${h.time ? `<input type="time" step="300" data-time="${h.id}" value="${r.times[h.id] || h.defaultTime || ""}" aria-label="Time">` : ""}</div>`;
@@ -192,19 +203,25 @@
     $("#btnCheckin").hidden = !!r.checkedIn;
     $("#btnCheckin").textContent = d === today() ? "Done for tonight" : `Check off ${fmtDate(d, { weekday: "long" })}`;
     $("#checkinNote").textContent = r.checkedIn ? "Checked in. Tap any row to change it." : (d === today() ? "Tick the day, then check in before the phone goes away." : "Tick what you did, then check it off.");
-    $("#prevDay").disabled = dayIndex(d) <= 1;
+    $("#prevDay").disabled = dayIndex(d) <= -6;
   }
 
   /* ---------- render: brain ---------- */
   function renderBrain() {
     const { minutes, vals } = brainMinutes(); const st = brainStage(minutes);
     $("#brainStage").textContent = P.brainStages[st - 1];
-    $("#brainLine").textContent = minutes == null ? "Type tonight's minutes and it tells you the truth." : st >= 8 ? "Barely touched it." : st >= 6 ? "Normal use." : st >= 4 ? "Getting spongy." : "The evening went into the feed.";
+    $("#brainLine").textContent = minutes == null ? "Log your minutes on the Habits page and it tells you the truth." : st >= 8 ? "Barely touched it." : st >= 6 ? "Normal use." : st >= 4 ? "Getting spongy." : "The evening went into the feed.";
     setStage("brain", $("#brainArt"), st);
-    const r = peek(today()); const el = $("#fIg"); if (document.activeElement !== el) el.value = r ? (r.ig ?? "") : "";
+    $("#brainAvg").textContent = minutes == null ? "–" : Math.round(minutes);
     const tr = $("#brainTrend"); tr.innerHTML = "";
-    vals.forEach((v, i) => { const d = document.createElement("div"); d.className = "t"; d.innerHTML = `<b>${v.v == null ? "–" : v.v}</b><span>${i === 0 ? "today" : i === 1 ? "yesterday" : DOW[parse(v.date).getDay()]}</span>`; tr.appendChild(d); });
+    vals.forEach((v) => { const d = document.createElement("div"); d.className = "t"; d.innerHTML = `<b>${v.v == null ? "–" : v.v}</b><span>${DOW[parse(v.date).getDay()]}</span>`; tr.appendChild(d); });
   }
+  function renderBlocks(host, items, current) {
+    host.innerHTML = "";
+    items.forEach((b) => { const el = document.createElement("div"); el.className = "block" + (current && current(b) ? " now" : ""); el.innerHTML = `<h2>${b.title}</h2><ul>${b.lines.map((l) => `<li>${l}</li>`).join("")}</ul>`; host.appendChild(el); });
+  }
+  function renderFocus() { const n = Math.max(1, dayIndex(today())); renderBlocks($("#focusBlocks"), P.focus, (b) => n >= b.from && n <= b.to); }
+  function renderInfo() { renderBlocks($("#infoBlocks"), P.info, null); }
 
   /* ---------- render: calendar ---------- */
   function renderMonth(host, titleEl, y, m) {
@@ -296,11 +313,14 @@
     const el = btn.closest(".habit"); const id = el.dataset.id; const r = rec(viewDate);
     if (btn.dataset.act === "more") { el.classList.toggle("open"); return; }
     r.done[id] = !r.done[id]; r.updated = Date.now(); persist(); queue(viewDate);
-    el.classList.toggle("done", !!r.done[id]); btn.setAttribute("aria-pressed", r.done[id] ? "true" : "false");
+    const h = P.habits.find((x) => x.id === id);
+    el.classList.toggle("done", metOn(h, viewDate)); btn.setAttribute("aria-pressed", r.done[id] ? "true" : "false");
     const c = completion(viewDate); $("#hDone").textContent = `${c.done} of ${c.total}`; $("#hBar").style.width = Math.round(c.r * 100) + "%";
     renderHome();
   });
   $("#habitList").addEventListener("change", (e) => {
+    const mi = e.target.closest("input[data-min]");
+    if (mi) { const r = rec(viewDate); r.ig = mi.value; r.updated = Date.now(); persist(); queue(viewDate); renderHabits(); renderHome(); return; }
     const inp = e.target.closest("input[data-time]"); if (!inp) return;
     const r = rec(viewDate); r.times[inp.dataset.time] = inp.value; r.updated = Date.now(); persist(); queue(viewDate);
     const row = inp.closest(".habit"); const t = row.querySelector(".h-time"); if (t) t.textContent = inp.value; else if (inp.value) { const s = document.createElement("span"); s.className = "h-time"; s.textContent = inp.value; row.querySelector(".h-text").appendChild(s); }
@@ -313,12 +333,15 @@
     renderHabits(); renderHome(); showNight(viewDate);
   });
   $("#btnTonight").addEventListener("click", () => { viewDate = today(); show("habits"); });
-  $("#streakBtn").addEventListener("click", () => show("cal"));
-  $("#fIg").addEventListener("change", (e) => { const r = rec(today()); r.ig = e.target.value; r.updated = Date.now(); persist(); queue(today()); renderBrain(); });
+  $("#streakBtn").addEventListener("click", () => { show("habits"); openCal(); });
   $("#calGrid").addEventListener("click", onCalClick); $("#calGrid2").addEventListener("click", onCalClick);
-  function onCalClick(e) { const b = e.target.closest(".cd[data-date]"); if (!b || b.disabled) return; viewDate = b.dataset.date; show("habits"); }
+  function onCalClick(e) { const b = e.target.closest(".cd[data-date]"); if (!b || b.disabled) return; viewDate = b.dataset.date; closeCal(); show("habits"); }
 
-  const views = ["home", "habits", "brain", "cal"];
+  const calSheet = $("#calSheet"), calScrim = $("#calScrim");
+  const openCal = () => { renderCal(); calSheet.hidden = false; calScrim.hidden = false; };
+  const closeCal = () => { calSheet.hidden = true; calScrim.hidden = true; };
+  $("#btnCal").addEventListener("click", openCal); $("#btnCalClose").addEventListener("click", closeCal); calScrim.addEventListener("click", closeCal);
+  const views = ["home", "habits", "brain", "focus", "info"];
   function show(v) {
     if (!views.includes(v)) v = "home";
     views.forEach((k) => { $(`#view-${k}`).hidden = k !== v; });
@@ -327,11 +350,12 @@
     if (v === "home") { setPlate(1, false); renderHome(); }
     if (v === "habits") { setPlate(4, true); renderHabits(); }
     if (v === "brain") { setPlate(2, false); renderBrain(); }
-    if (v === "cal") { setPlate(4, true); renderCal(); }
+    if (v === "focus") { setPlate(4, true); renderFocus(); }
+    if (v === "info") { setPlate(4, true); renderInfo(); }
     scrollTo({ top: 0 }); try { history.replaceState(null, "", "#" + v); } catch {}
   }
   document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => show(t.dataset.view)));
-  function renderAll() { renderHome(); renderHabits(); renderBrain(); renderCal(); }
+  function renderAll() { renderHome(); renderHabits(); renderBrain(); renderFocus(); renderInfo(); }
 
   /* ---------- settings ---------- */
   const sheet = $("#sheet"), scrim = $("#sheetScrim");

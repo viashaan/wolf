@@ -139,7 +139,7 @@
 
   /* ---------- art crossfade ---------- */
   const shownStage = { wolf: 0, brain: 0 };
-  const VIDEO = { wolf: true, brain: false };   // stages that ship as looping clips
+  const VIDEO = { wolf: false, brain: false };   // stages that ship as looping clips
   function srcFor(kind, n) { return VIDEO[kind] ? `img/${kind}/${pad(n)}.mp4` : `img/${kind}/${pad(n)}.webp`; }
   function load(el, kind, n, cb) {
     const src = srcFor(kind, n);

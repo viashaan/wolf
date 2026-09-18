@@ -1,0 +1,493 @@
+{
+ "tick": [
+  [
+   "tick-tk.mp3",
+   "tk",
+   "tk"
+  ],
+  [
+   "tick-thock.mp3",
+   "thock",
+   "thock"
+  ],
+  [
+   "tick-snap.mp3",
+   "snap",
+   "snap"
+  ],
+  [
+   "tick-digital.mp3",
+   "digital",
+   "digital"
+  ],
+  [
+   "tick-heavy.mp3",
+   "heavy",
+   "heavy"
+  ],
+  [
+   "tick-bassy-click.mp3",
+   "lib bassy click",
+   "library"
+  ],
+  [
+   "tick-click-thud.mp3",
+   "lib click thud",
+   "library"
+  ],
+  [
+   "tick-latch-click.mp3",
+   "lib latch click",
+   "library"
+  ],
+  [
+   "tick-slider-click.mp3",
+   "lib slider click",
+   "library"
+  ],
+  [
+   "tick-simple-switch.mp3",
+   "lib simple switch",
+   "library"
+  ],
+  [
+   "tick-stutter-click.mp3",
+   "lib stutter click",
+   "library"
+  ],
+  [
+   "tick-windy-click.mp3",
+   "lib windy click",
+   "library"
+  ],
+  [
+   "tick-button.mp3",
+   "lib button",
+   "library"
+  ],
+  [
+   "tick-shutter-click.mp3",
+   "lib shutter click",
+   "library"
+  ],
+  [
+   "tick-mini-gears.mp3",
+   "lib mini gears",
+   "library"
+  ],
+  [
+   "tick-treadmill-button.mp3",
+   "lib treadmill button",
+   "library"
+  ]
+ ],
+ "untick": [
+  [
+   "untick-tk.mp3",
+   "tk",
+   "tk"
+  ],
+  [
+   "untick-thock.mp3",
+   "thock",
+   "thock"
+  ],
+  [
+   "untick-snap.mp3",
+   "snap",
+   "snap"
+  ],
+  [
+   "untick-digital.mp3",
+   "digital",
+   "digital"
+  ],
+  [
+   "untick-heavy.mp3",
+   "heavy",
+   "heavy"
+  ],
+  [
+   "untick-bassy-click.mp3",
+   "lib bassy click",
+   "library"
+  ],
+  [
+   "untick-click-thud.mp3",
+   "lib click thud",
+   "library"
+  ],
+  [
+   "untick-latch-click.mp3",
+   "lib latch click",
+   "library"
+  ],
+  [
+   "untick-slider-click.mp3",
+   "lib slider click",
+   "library"
+  ],
+  [
+   "untick-simple-switch.mp3",
+   "lib simple switch",
+   "library"
+  ],
+  [
+   "untick-stutter-click.mp3",
+   "lib stutter click",
+   "library"
+  ],
+  [
+   "untick-windy-click.mp3",
+   "lib windy click",
+   "library"
+  ],
+  [
+   "untick-button.mp3",
+   "lib button",
+   "library"
+  ],
+  [
+   "untick-shutter-click.mp3",
+   "lib shutter click",
+   "library"
+  ],
+  [
+   "untick-mini-gears.mp3",
+   "lib mini gears",
+   "library"
+  ],
+  [
+   "untick-treadmill-button.mp3",
+   "lib treadmill button",
+   "library"
+  ]
+ ],
+ "complete": [
+  [
+   "complete-tk.mp3",
+   "tk",
+   "tk"
+  ],
+  [
+   "complete-thock.mp3",
+   "thock",
+   "thock"
+  ],
+  [
+   "complete-snap.mp3",
+   "snap",
+   "snap"
+  ],
+  [
+   "complete-digital.mp3",
+   "digital",
+   "digital"
+  ],
+  [
+   "complete-heavy.mp3",
+   "heavy",
+   "heavy"
+  ],
+  [
+   "complete-bassy-click.mp3",
+   "lib bassy click",
+   "library"
+  ],
+  [
+   "complete-click-thud.mp3",
+   "lib click thud",
+   "library"
+  ],
+  [
+   "complete-latch-click.mp3",
+   "lib latch click",
+   "library"
+  ],
+  [
+   "complete-slider-click.mp3",
+   "lib slider click",
+   "library"
+  ],
+  [
+   "complete-simple-switch.mp3",
+   "lib simple switch",
+   "library"
+  ],
+  [
+   "complete-stutter-click.mp3",
+   "lib stutter click",
+   "library"
+  ],
+  [
+   "complete-windy-click.mp3",
+   "lib windy click",
+   "library"
+  ],
+  [
+   "complete-button.mp3",
+   "lib button",
+   "library"
+  ],
+  [
+   "complete-shutter-click.mp3",
+   "lib shutter click",
+   "library"
+  ],
+  [
+   "complete-mini-gears.mp3",
+   "lib mini gears",
+   "library"
+  ],
+  [
+   "complete-treadmill-button.mp3",
+   "lib treadmill button",
+   "library"
+  ]
+ ],
+ "checkin": [
+  [
+   "checkin-tk.mp3",
+   "tk",
+   "tk"
+  ],
+  [
+   "checkin-thock.mp3",
+   "thock",
+   "thock"
+  ],
+  [
+   "checkin-snap.mp3",
+   "snap",
+   "snap"
+  ],
+  [
+   "checkin-digital.mp3",
+   "digital",
+   "digital"
+  ],
+  [
+   "checkin-heavy.mp3",
+   "heavy",
+   "heavy"
+  ],
+  [
+   "checkin-bassy-click.mp3",
+   "lib bassy click",
+   "library"
+  ],
+  [
+   "checkin-click-thud.mp3",
+   "lib click thud",
+   "library"
+  ],
+  [
+   "checkin-latch-click.mp3",
+   "lib latch click",
+   "library"
+  ],
+  [
+   "checkin-slider-click.mp3",
+   "lib slider click",
+   "library"
+  ],
+  [
+   "checkin-simple-switch.mp3",
+   "lib simple switch",
+   "library"
+  ],
+  [
+   "checkin-stutter-click.mp3",
+   "lib stutter click",
+   "library"
+  ],
+  [
+   "checkin-windy-click.mp3",
+   "lib windy click",
+   "library"
+  ],
+  [
+   "checkin-button.mp3",
+   "lib button",
+   "library"
+  ],
+  [
+   "checkin-shutter-click.mp3",
+   "lib shutter click",
+   "library"
+  ],
+  [
+   "checkin-mini-gears.mp3",
+   "lib mini gears",
+   "library"
+  ],
+  [
+   "checkin-treadmill-button.mp3",
+   "lib treadmill button",
+   "library"
+  ]
+ ],
+ "milestone": [
+  [
+   "milestone-tk.mp3",
+   "tk",
+   "tk"
+  ],
+  [
+   "milestone-thock.mp3",
+   "thock",
+   "thock"
+  ],
+  [
+   "milestone-snap.mp3",
+   "snap",
+   "snap"
+  ],
+  [
+   "milestone-digital.mp3",
+   "digital",
+   "digital"
+  ],
+  [
+   "milestone-heavy.mp3",
+   "heavy",
+   "heavy"
+  ]
+ ],
+ "stageup": [
+  [
+   "stageup-tk.mp3",
+   "tk",
+   "tk"
+  ],
+  [
+   "stageup-thock.mp3",
+   "thock",
+   "thock"
+  ],
+  [
+   "stageup-snap.mp3",
+   "snap",
+   "snap"
+  ],
+  [
+   "stageup-digital.mp3",
+   "digital",
+   "digital"
+  ],
+  [
+   "stageup-heavy.mp3",
+   "heavy",
+   "heavy"
+  ]
+ ],
+ "stagedown": [
+  [
+   "stagedown-tk.mp3",
+   "tk",
+   "tk"
+  ],
+  [
+   "stagedown-thock.mp3",
+   "thock",
+   "thock"
+  ],
+  [
+   "stagedown-snap.mp3",
+   "snap",
+   "snap"
+  ],
+  [
+   "stagedown-digital.mp3",
+   "digital",
+   "digital"
+  ],
+  [
+   "stagedown-heavy.mp3",
+   "heavy",
+   "heavy"
+  ]
+ ],
+ "click": [
+  [
+   "click-tk.mp3",
+   "tk",
+   "tk"
+  ],
+  [
+   "click-thock.mp3",
+   "thock",
+   "thock"
+  ],
+  [
+   "click-snap.mp3",
+   "snap",
+   "snap"
+  ],
+  [
+   "click-digital.mp3",
+   "digital",
+   "digital"
+  ],
+  [
+   "click-heavy.mp3",
+   "heavy",
+   "heavy"
+  ],
+  [
+   "click-bassy-click.mp3",
+   "lib bassy click",
+   "library"
+  ],
+  [
+   "click-click-thud.mp3",
+   "lib click thud",
+   "library"
+  ],
+  [
+   "click-latch-click.mp3",
+   "lib latch click",
+   "library"
+  ],
+  [
+   "click-slider-click.mp3",
+   "lib slider click",
+   "library"
+  ],
+  [
+   "click-simple-switch.mp3",
+   "lib simple switch",
+   "library"
+  ],
+  [
+   "click-stutter-click.mp3",
+   "lib stutter click",
+   "library"
+  ],
+  [
+   "click-windy-click.mp3",
+   "lib windy click",
+   "library"
+  ],
+  [
+   "click-button.mp3",
+   "lib button",
+   "library"
+  ],
+  [
+   "click-shutter-click.mp3",
+   "lib shutter click",
+   "library"
+  ],
+  [
+   "click-mini-gears.mp3",
+   "lib mini gears",
+   "library"
+  ],
+  [
+   "click-treadmill-button.mp3",
+   "lib treadmill button",
+   "library"
+  ]
+ ]
+}

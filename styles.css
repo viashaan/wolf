@@ -24,7 +24,7 @@
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 [hidden]{display:none!important}
-html,body{height:100%;overflow-x:hidden;max-width:100%}
+html,body{height:100%}
 body{
   margin:0;background:var(--ground);color:var(--bone);
   font-family:var(--sans);font-weight:500;font-size:15px;line-height:1.5;

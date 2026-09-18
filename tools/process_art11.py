@@ -26,7 +26,11 @@ def key(img, mt=None):
     near = ndimage.binary_dilation(m > 0.5, iterations=4)
     alpha = np.maximum(m, chroma * near)
     alpha = np.asarray(Image.fromarray((alpha * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(0.6)), np.float32) / 255
-    return np.asarray(img.convert("RGB"), np.float32) / 255, alpha[..., None]
+    alpha = np.clip((alpha - 0.12) / 0.88, 0, 1)                      # pull the edge in a hair
+    rgb = np.asarray(img.convert("RGB"), np.float32) / 255
+    a3 = alpha[..., None]; bgc = (bg / 255).astype(np.float32)
+    rgb = np.where(a3 > 0, np.clip((rgb - bgc * (1 - a3)) / np.maximum(a3, 0.08), 0, 1), rgb)   # remove the plate mixed into edge pixels
+    return rgb, a3
 
 def pool(cy):
     """Elliptical pool centred on the wolf: colour CENTRE->RIM, alpha 1 -> 0 with a long smooth tail."""

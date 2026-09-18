@@ -65,7 +65,7 @@ h1,h2,p{margin:0}
 
 /* ---------- views ---------- */
 main{position:relative;z-index:1;padding:0 18px calc(var(--tabs-h) + var(--sab) + 28px);overflow-x:clip}
-.view{display:flex;flex-direction:column;gap:18px;animation:rise .28s var(--ease)}
+.view{display:flex;flex-direction:column;gap:18px;animation:rise .28s var(--ease);min-height:calc(100dvh - 60px)}
 @keyframes rise{from{opacity:.001;transform:translateY(6px)}}
 .view.home{align-items:center;text-align:center;gap:10px}
 

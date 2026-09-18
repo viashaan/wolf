@@ -349,7 +349,7 @@
     document.querySelectorAll(".tab").forEach((t) => { const on = t.dataset.view === v; t.classList.toggle("is-active", on); if (on) t.setAttribute("aria-current", "page"); else t.removeAttribute("aria-current"); });
     if (v === "home") { setPlate(1, false); renderHome(); }
     if (v === "habits") { setPlate(4, true); renderHabits(); }
-    if (v === "brain") { setPlate(2, false); renderBrain(); }
+    if (v === "brain") { setPlate(1, false); renderBrain(); }
     if (v === "focus") { setPlate(4, true); renderFocus(); }
     if (v === "info") { setPlate(4, true); renderInfo(); }
     scrollTo({ top: 0 }); try { history.replaceState(null, "", "#" + v); } catch {}

@@ -338,7 +338,12 @@ input[type="number"]::-webkit-inner-spin-button{-webkit-appearance:none}
 /* ---------- learn ---------- */
 .view.learn{gap:12px}
 .feed{display:flex;flex-direction:column;gap:12px;width:100%}
-.lcard{background:rgba(20,18,16,.58);border:1px solid var(--line);border-radius:16px;padding:16px 16px 14px;display:flex;flex-direction:column;gap:9px;text-align:left}
+.lcard{background:rgba(20,18,16,.58);border:1px solid var(--line);border-radius:16px;padding:16px 16px 14px;display:flex;flex-direction:column;gap:9px;text-align:left;overflow:hidden}
+.lcard .li{margin:-16px -16px 6px;aspect-ratio:3/2;background:#1c1814;position:relative}
+.lcard .li img{width:100%;height:100%;object-fit:cover;display:block;filter:saturate(.9) contrast(1.02)}
+.lcard .li::after{content:"";position:absolute;inset:0;background:linear-gradient(to bottom,rgba(20,18,16,0) 55%,rgba(20,18,16,.75) 100%);pointer-events:none}
+.lcard .lsrc{font-size:11px;color:var(--ash-2);letter-spacing:.02em;margin:0}
+.lcard .lsrc a{color:var(--ash-2);text-decoration:underline;text-decoration-color:rgba(140,129,114,.5);text-underline-offset:2px}
 .lcard .ls{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ash-2);display:flex;justify-content:space-between;align-items:center}
 .lcard h3{font-family:var(--serif);font-weight:650;font-size:19px;line-height:1.15;font-variation-settings:"SOFT" 30,"WONK" 1;color:var(--bone);margin:0}
 .lcard .lb{font-size:14.5px;line-height:1.48;color:var(--bone);opacity:.92}

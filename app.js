@@ -3,7 +3,7 @@
   "use strict";
   const P = window.PLAN;
   const $ = (s) => document.querySelector(s);
-  const VERSION = "6.8";
+  const VERSION = "6.9";
   try { const qs = new URLSearchParams(location.search); if (/^\d{4}-\d{2}-\d{2}$/.test(qs.get("start") || "")) P.start = qs.get("start"); } catch {}
 
   /* ---------- dates ---------- */
@@ -577,8 +577,11 @@ Commitments: no alcohol, no cigarettes since 15 Sept. Pouches allowed with an 18
     function card(c) {
       const el = document.createElement("article"); el.className = "lcard"; el.dataset.id = c.id;
       const sub = (bank.subjects && bank.subjects[c.s]) || c.s; const isSaved = saved.includes(c.id);
-      el.innerHTML = `<div class="ls"><span>${sub}</span><span>${seen[c.id] ? "" : "New"}</span></div><h3></h3><p class="lb"></p><p class="lw"></p><div class="la"><button class="save${isSaved ? " on" : ""}" type="button">${isSaved ? "Saved" : "Save"}</button><button class="ask" type="button">Ask</button></div>`;
+      const img = c.img ? `<div class="li"><img loading="lazy" decoding="async" alt="" src="img/learn/${c.id}.webp?v=${c.img}"></div>` : "";
+      const src = c.src && c.src.l ? `<p class="lsrc">Source: ${c.src.u ? `<a href="${c.src.u}" target="_blank" rel="noopener"></a>` : `<span></span>`}</p>` : "";
+      el.innerHTML = `${img}<div class="ls"><span>${sub}</span><span>${seen[c.id] ? "" : "New"}</span></div><h3></h3><p class="lb"></p><p class="lw"></p>${src}<div class="la"><button class="save${isSaved ? " on" : ""}" type="button">${isSaved ? "Saved" : "Save"}</button><button class="ask" type="button">Ask</button></div>`;
       el.querySelector("h3").textContent = c.t; el.querySelector(".lb").textContent = c.b; el.querySelector(".lw").textContent = c.w;
+      if (src) el.querySelector(".lsrc a, .lsrc span").textContent = c.src.l;
       el.querySelector(".save").addEventListener("click", (e) => { const b = e.currentTarget; const i = saved.indexOf(c.id); if (i >= 0) saved.splice(i, 1); else saved.push(c.id); LS.set("wolf.learn.saved", saved); b.classList.toggle("on", i < 0); b.textContent = i < 0 ? "Saved" : "Save"; SFX.play("tick"); });
       el.querySelector(".ask").addEventListener("click", () => { $("#askInput").value = `Tell me more: ${c.t}`; show("ask"); setTimeout(() => $("#askInput").focus(), 50); });
       return el;

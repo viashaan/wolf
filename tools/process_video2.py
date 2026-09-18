@@ -22,11 +22,24 @@ def plate_colour(img):
     edge = np.concatenate([a[:40].reshape(-1, 3), a[-40:].reshape(-1, 3), a[:, :40].reshape(-1, 3), a[:, -40:].reshape(-1, 3)])
     return np.median(edge, axis=0)
 
-def key(img, bg):
-    a = np.asarray(img.convert("RGB").filter(ImageFilter.GaussianBlur(0.8)), np.float32)
+def key(img, bg=None):
+    """Plate is flat (noise under 5 levels), so key tight, then fill holes so dark fur inside the silhouette stays."""
+    from scipy import ndimage
+    a = np.asarray(img.convert("RGB").filter(ImageFilter.GaussianBlur(0.6)), np.float32)
+    if bg is None:
+        edge = np.concatenate([a[:50].reshape(-1, 3), a[-50:].reshape(-1, 3), a[:, :50].reshape(-1, 3), a[:, -50:].reshape(-1, 3)])
+        bg = np.median(edge, axis=0)
     d = np.sqrt(((a - bg) ** 2).sum(-1))
-    alpha = np.clip((d - 22) / 40, 0, 1)
-    alpha = np.asarray(Image.fromarray((alpha * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(1.0)), np.float32) / 255
+    alpha = np.clip((d - 7) / 10, 0, 1)
+    hard = alpha > 0.5
+    hard = ndimage.binary_closing(hard, iterations=4)
+    hard = ndimage.binary_fill_holes(hard)
+    lab, k = ndimage.label(hard)
+    if k > 1:   # keep the big blobs only (the wolf), drop plate specks
+        sizes = ndimage.sum(hard, lab, range(1, k + 1)); keep = np.isin(lab, [i + 1 for i, s in enumerate(sizes) if s > 0.002 * hard.size])
+        hard = keep
+    alpha = np.maximum(alpha, hard.astype(np.float32)) * ndimage.binary_dilation(hard, iterations=3)
+    alpha = np.asarray(Image.fromarray((alpha * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(0.8)), np.float32) / 255
     return np.asarray(img.convert("RGB"), np.float32) / 255, alpha[..., None]
 
 def pool(cy):
@@ -73,14 +86,15 @@ def run(n, src):
         bl = np.asarray(Image.fromarray((np.clip(bright, 0, 1) * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(18)), np.float32) / 255
         col = 1 - (1 - col) * (1 - bl * 0.35)
         out = np.concatenate([np.clip(col, 0, 1), np.clip(acc, 0, 1)], axis=-1)
-        Image.fromarray((out * 255).astype(np.uint8), "RGBA").resize((OUT, OUT), Image.LANCZOS).save(f"{tmp}/out_{i:04d}.png")
-        premultiply(f"{tmp}/out_{i:04d}.png")
-    # cross-blend the tail into the head so the loop closes even if the model drifted
-    N = len(frames); X = min(10, N // 4)
-    for j in range(X):
-        t = (j + 1) / (X + 1)
-        a = np.asarray(Image.open(f"{tmp}/out_{N - X + j:04d}.png"), np.float32); b = np.asarray(Image.open(f"{tmp}/out_{j:04d}.png"), np.float32)
-        Image.fromarray((a * (1 - t) + b * t).astype(np.uint8), "RGBA").save(f"{tmp}/out_{N - X + j:04d}.png")
+        im = Image.fromarray((out * 255).astype(np.uint8), "RGBA").resize((OUT, OUT), Image.LANCZOS)
+        os.makedirs(f"{tmp}/st", exist_ok=True); im.save(f"{tmp}/st/out_{i:04d}.png")   # straight alpha (WebM)
+        im.save(f"{tmp}/out_{i:04d}.png"); premultiply(f"{tmp}/out_{i:04d}.png")       # premultiplied (HEVC, Safari)
+    # ping-pong: play forward then back so the loop always closes through its own frames
+    N = len(frames)
+    for j in range(N - 2, 0, -1):
+        k = N + (N - 2 - j)
+        for sub in ("", "st/"):
+            shutil.copy(f"{tmp}/{sub}out_{j:04d}.png", f"{tmp}/{sub}out_{k:04d}.png")
     encode(n, tmp)
 
 def encode(n, tmp):
@@ -88,7 +102,11 @@ def encode(n, tmp):
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-framerate", str(FPS), "-i", f"{tmp}/out_%04d.png",
                     "-c:v", "hevc_videotoolbox", "-pix_fmt", "bgra", "-alpha_quality", "0.85", "-q:v", "62", "-tag:v", "hvc1",
                     "-movflags", "+faststart", "-an", dst], check=True)
-    print(dst, os.path.getsize(dst) // 1024, "KB")
+    VPX = "/Users/shaan_johari/Desktop/Shaan's AIOS/.venv/lib/python3.14/site-packages/imageio_ffmpeg/binaries/ffmpeg-macos-aarch64-v7.1"
+    webm = f"{ROOT}/wolf/{n:02d}.webm"
+    subprocess.run([VPX, "-y", "-loglevel", "error", "-framerate", str(FPS), "-i", f"{tmp}/st/out_%04d.png",
+                    "-c:v", "libvpx-vp9", "-pix_fmt", "yuva420p", "-auto-alt-ref", "0", "-b:v", "0", "-crf", "32", "-row-mt", "1", "-deadline", "good", "-cpu-used", "2", "-an", webm], check=True)
+    print(dst, os.path.getsize(dst) // 1024, "KB", webm, os.path.getsize(webm) // 1024, "KB")
 
 if __name__ == "__main__":
     if sys.argv[1] == "reencode":     # premultiply existing out_ frames and re-encode

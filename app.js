@@ -3,7 +3,7 @@
   "use strict";
   const P = window.PLAN;
   const $ = (s) => document.querySelector(s);
-  const VERSION = "2.5";
+  const VERSION = "2.6";
   try { const qs = new URLSearchParams(location.search); if (/^\d{4}-\d{2}-\d{2}$/.test(qs.get("start") || "")) P.start = qs.get("start"); } catch {}
 
   /* ---------- dates ---------- */
@@ -352,7 +352,7 @@
     if (v === "brain") { setPlate(2, false); renderBrain(); }
     if (v === "focus") { setPlate(4, true); renderFocus(); }
     if (v === "info") { setPlate(4, true); renderInfo(); }
-    $("#main").scrollTo(0, 0); try { history.replaceState(null, "", "#" + v); } catch {}
+    scrollTo({ top: 0 }); try { history.replaceState(null, "", "#" + v); } catch {}
   }
   document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => show(t.dataset.view)));
   function renderAll() { renderHome(); renderHabits(); renderBrain(); renderFocus(); renderInfo(); }
@@ -369,14 +369,6 @@
   });
   $("#btnPull").addEventListener("click", pullHistory); $("#ver").textContent = VERSION;
   try { const sab = getComputedStyle(document.documentElement).getPropertyValue("--sab"); const tb = document.querySelector(".tabs").getBoundingClientRect().bottom; $("#dbg").textContent = `inner ${innerWidth}x${innerHeight} · screen ${screen.width}x${screen.height} · body ${document.body.getBoundingClientRect().height|0} · tabsBottom ${tb|0} · sab ${sab.trim() || "0"} · standalone ${!!navigator.standalone}`; } catch {}
-
-  /* ---------- viewport: iOS standalone may already reserve the home-indicator strip ---------- */
-  function fitViewport() {
-    const reserved = (screen.height - innerHeight) > 40 && !!navigator.standalone;
-    document.documentElement.style.setProperty("--sab-eff", reserved ? "0px" : "env(safe-area-inset-bottom,0px)");
-    document.body.style.height = innerHeight + "px";
-  }
-  fitViewport(); addEventListener("resize", fitViewport); addEventListener("orientationchange", () => setTimeout(fitViewport, 300));
 
   /* ---------- boot ---------- */
   const startView = (location.hash || "#home").slice(1);

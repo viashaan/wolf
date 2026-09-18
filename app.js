@@ -3,7 +3,7 @@
   "use strict";
   const P = window.PLAN;
   const $ = (s) => document.querySelector(s);
-  const VERSION = "2.6";
+  const VERSION = "2.7";
   try { const qs = new URLSearchParams(location.search); if (/^\d{4}-\d{2}-\d{2}$/.test(qs.get("start") || "")) P.start = qs.get("start"); } catch {}
 
   /* ---------- dates ---------- */
@@ -369,6 +369,13 @@
   });
   $("#btnPull").addEventListener("click", pullHistory); $("#ver").textContent = VERSION;
   try { const sab = getComputedStyle(document.documentElement).getPropertyValue("--sab"); const tb = document.querySelector(".tabs").getBoundingClientRect().bottom; $("#dbg").textContent = `inner ${innerWidth}x${innerHeight} · screen ${screen.width}x${screen.height} · body ${document.body.getBoundingClientRect().height|0} · tabsBottom ${tb|0} · sab ${sab.trim() || "0"} · standalone ${!!navigator.standalone}`; } catch {}
+
+  /* ---------- iOS standalone reserves the home-indicator strip itself; do not pad for it twice ---------- */
+  function fitViewport() {
+    const reserved = !!navigator.standalone && (screen.height - innerHeight) > 40;
+    document.documentElement.style.setProperty("--sab-eff", reserved ? "0px" : "env(safe-area-inset-bottom,0px)");
+  }
+  fitViewport(); addEventListener("resize", fitViewport);
 
   /* ---------- boot ---------- */
   const startView = (location.hash || "#home").slice(1);

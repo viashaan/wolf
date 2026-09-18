@@ -65,7 +65,7 @@ h1,h2,p{margin:0}
 .icon-btn svg{width:20px;height:20px}
 
 /* ---------- views ---------- */
-main{position:relative;z-index:1;padding:0 18px calc(var(--tabs-h) + var(--sab) + 28px);overflow-x:clip}
+main{position:relative;z-index:1;padding:0 18px calc(var(--tabs-h) + var(--sab-eff) + 28px);overflow-x:clip}
 .view{display:flex;flex-direction:column;gap:18px;animation:rise .28s var(--ease);min-height:calc(100dvh - 56px)}
 @keyframes rise{from{opacity:.001;transform:translateY(6px)}}
 .view.home{align-items:center;text-align:center;gap:10px}
@@ -189,8 +189,8 @@ input[type="number"]::-webkit-inner-spin-button{-webkit-appearance:none}
 
 /* ---------- tabs ---------- */
 .tabs{
-  position:fixed;left:0;right:0;bottom:0;z-index:30;height:calc(var(--tabs-h) + var(--sab));padding:0 8px var(--sab);
-  display:grid;grid-template-columns:repeat(5,1fr);background:rgba(20,18,16,.88);border-top:1px solid var(--line);
+  position:fixed;left:0;right:0;bottom:0;z-index:30;height:calc(var(--tabs-h) + var(--sab-eff));padding:0 8px var(--sab-eff);
+  display:grid;grid-template-columns:repeat(5,1fr);background:rgba(20,18,16,.94);border-top:1px solid var(--line);
   -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
 }
 .tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--ash-2);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase}
@@ -218,7 +218,7 @@ input[type="number"]::-webkit-inner-spin-button{-webkit-appearance:none}
 .scrim-layer{position:fixed;inset:0;z-index:60;background:rgba(12,10,9,.62)}
 .sheet{
   position:fixed;left:0;right:0;bottom:0;z-index:61;background:#1B1815;border-radius:20px 20px 0 0;
-  padding:10px 20px calc(var(--sab) + 20px);display:flex;flex-direction:column;gap:14px;animation:up .22s var(--ease);max-height:88dvh;overflow:auto;
+  padding:10px 20px calc(var(--sab-eff) + 20px);display:flex;flex-direction:column;gap:14px;animation:up .22s var(--ease);max-height:88dvh;overflow:auto;
 }
 @keyframes up{from{transform:translateY(24px);opacity:.001}}
 .sheet-handle{width:36px;height:4px;border-radius:2px;background:var(--line-2);margin:0 auto 6px}

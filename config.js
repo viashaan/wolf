@@ -85,39 +85,19 @@ window.PLAN = {
     ]}
   ],
 
-  // Info tab. Short, scannable.
-  info: [
-    { title: "You are a wolf", lines: [
-      "Evening chronotype, about 15% of people. Bed around midnight, groggy until late morning, sharpest in the afternoon, second wind at night.",
-      "Waking at 12 or 2pm is not the chronotype. That was drift, alcohol, nicotine, no daylight, no training.",
-      "The cheapest lever is daylight within an hour of waking. The strongest is a fixed wake time."
-    ]},
-    { title: "Your day, by energy", lines: [
-      "07:45 up. 08:00 water and breakfast. 08:15 outside.",
-      "09:00 to 11:00 plan, admin, loose thinking.",
-      "11:00 first coffee. 11:00 to 13:00 busy work.",
-      "14:00 to 18:00 peak. The hard creative work lives here. Caffeine cutoff at 14:00.",
-      "16:00 to 18:00 calls and anything persuasive.",
-      "17:30 gym. 19:30 dinner. 21:00 to 22:30 people, not projects.",
-      "22:30 phone away, hot shower. 23:30 bed, room at 18 to 19C."
-    ]},
-    { title: "ENFP, and what it means here", lines: [
-      "High on novelty, low on routine. Systems that need daily willpower get abandoned.",
-      "Change the environment once instead: phone outside the bedroom, app deleted, gym within ten minutes.",
-      "Frame things as experiments, not commitments. Celebrate follow-through. Never shame.",
-      "The 9pm to 11pm surge is real. Spend it on people or rest, not a new project."
-    ]},
-    { title: "Sleep, the short version", lines: [
-      "Alcohol kills REM even when it helps you fall asleep. That is why 8 hours has not felt like 8.",
-      "Nicotine has a two-hour half-life and fragments sleep. 18:00 cutoff captures most of the benefit.",
-      "Caffeine within 8 to 10 hours of bed degrades sleep quality even if you fall asleep fine.",
-      "A hot shower before bed works because of the temperature drop when you get out.",
-      "One missed night is noise. Showing up the next night is the habit."
-    ]},
-    { title: "Focus", lines: [
-      "Protect 14:00 to 18:00. Put triage, renders and admin before lunch.",
-      "One thing on the desk at a time. Write the next three tasks at 09:00, do the hardest at 14:00.",
-      "Phone in another room while working. The feed is engineered to win every time it is in reach."
-    ]}
-  ]
+  // Ask tab: Claude, on the phone, answering from the plan + today's data. Key lives in Settings.
+  ask: {
+    model: "claude-opus-5",
+    knowledgePath: "knowledge.md",      // in the private data repo, never in this public shell
+    chips: [
+      ["Coffee?",        "Can I have a coffee right now?"],
+      ["Pouch?",         "Can I have a nicotine pouch right now?"],
+      ["Nap?",           "I am tired. Can I nap?"],
+      ["Sun",            "How much sun do I need and when, today?"],
+      ["Gym today?",     "Am I training today? If so, which session and how hard?"],
+      ["Eat",           "What should I eat next, and how much protein am I on track for?"],
+      ["How am I doing", "How am I doing this week? Be honest. One thing to fix."],
+      ["Tonight",        "What do I need to do between now and bed tonight?"]
+    ]
+  }
 };

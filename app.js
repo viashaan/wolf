@@ -379,7 +379,7 @@ Commitments: no alcohol, no cigarettes since 15 Sept. Pouches allowed with an 18
         logAsks(h2);
       } catch (e) {
         el.classList.remove("wait"); el.classList.add("err");
-        el.textContent = /401|invalid x-api-key|authentication/i.test(e.message) ? "Key rejected. Check it in Settings." : navigator.onLine ? `Did not get through. ${e.message}` : "No signal. Try again when you are online.";
+        el.textContent = /401|api key|x-api-key|authentication/i.test(e.message) ? "Key rejected. Check it in Settings." : navigator.onLine ? `Did not get through. ${e.message}` : "No signal. Try again when you are online.";
         const h2 = hist(); if (h2.length && h2[h2.length - 1].role === "user") { h2.pop(); saveHist(h2); }
       } finally { busy = false; form.classList.remove("busy"); $("#askSend").disabled = false; el.scrollIntoView({ block: "end" }); }
     }

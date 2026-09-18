@@ -7,7 +7,7 @@ from PIL import Image, ImageFilter
 ROOT = os.path.expanduser("~/Documents/wolf/img")
 ZOOM = {1: 1.04, 2: 1.02, 3: 0.97, 4: 0.98, 5: 1.00, 6: 1.03, 7: 1.06, 8: 1.10, 9: 1.14, 10: 1.18}
 S = 1520; OUT = 1000
-CENTRE = np.array([0x3E, 0x2E, 0x1C], np.float32) / 255   # warm pool under the wolf
+CENTRE = np.array([0x36, 0x28, 0x1A], np.float32) / 255   # warm pool under the wolf
 RIM    = np.array([0x22, 0x1A, 0x13], np.float32) / 255   # near the plate tone, where alpha runs out
 
 def hblur(a, k):
@@ -26,10 +26,10 @@ def key(img):
 
 def grade(rgb):
     """Punch on the wolf only: black point down, S-curve, a little saturation, unsharp."""
-    x = np.clip((rgb - 0.07) / 0.93, 0, 1)                       # deeper blacks
-    x = np.where(x < 0.5, 0.5 * (2 * x) ** 1.35, 1 - 0.5 * (2 * (1 - x)) ** 1.35)   # S-curve
+    x = np.clip((rgb - 0.11) / 0.89, 0, 1)                       # deeper blacks
+    x = np.where(x < 0.5, 0.5 * (2 * x) ** 1.55, 1 - 0.5 * (2 * (1 - x)) ** 1.55)   # S-curve
     lum = (x @ np.array([0.3, 0.59, 0.11], np.float32))[..., None]
-    x = np.clip(lum + (x - lum) * 0.98, 0, 1)                    # saturation
+    x = np.clip(lum + (x - lum) * 0.96, 0, 1)                    # saturation
     im = Image.fromarray((x * 255).astype(np.uint8))
     im = im.filter(ImageFilter.UnsharpMask(radius=2, percent=70, threshold=2))
     return np.asarray(im, np.float32) / 255
@@ -62,7 +62,8 @@ def stage(n, src, dst):
     rgb = grade(rgb)
     ox = (S - side) // 2; oy = max(0, min(S - side, (S - side) // 2 + int((1 - z) * 60)))
     ys_w = np.where(alpha[..., 0].max(1) > 0.5)[0]; cy = oy + (ys_w.min() + ys_w.max()) / 2 if len(ys_w) else S / 2
-    col, acc = pool(cy); col = col.copy(); acc = acc.copy()
+    yb = oy + ys_w.max() if len(ys_w) else S / 2
+    col, acc = pool(cy * 0.35 + yb * 0.65); col = col.copy(); acc = acc.copy()
     def over(lrgb, la, dx, dy, gain):
         ys, xs = slice(oy + dy, oy + dy + side), slice(ox + dx, ox + dx + side)
         a = la * gain
@@ -71,10 +72,12 @@ def stage(n, src, dst):
     prem = rgb * alpha
     grey = (prem @ np.array([0.3, 0.59, 0.11], np.float32))[..., None]
     warm = np.array([1.0, 0.86, 0.66], np.float32)
-    for k, dx, gain in ((int(side * 0.16) | 1, min(int(side * 0.09), ox), 0.42), (int(side * 0.07) | 1, min(int(side * 0.04), ox), 0.30)):
+    for k, dx, gain in ((int(side * 0.16) | 1, min(int(side * 0.09), ox), 0.36), (int(side * 0.07) | 1, min(int(side * 0.04), ox), 0.26)):
         g_rgb = hblur(prem * 0.45 + grey * 0.55, k) * warm; g_a = hblur(alpha, k)
         g_col = np.where(g_a > 1e-4, g_rgb / np.maximum(g_a, 1e-4), 0)
         over(g_col, g_a, dx, 0, gain); over(g_col, g_a, -dx // 2, 0, gain * 0.6)
+    halo = np.asarray(Image.fromarray((alpha[..., 0] * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(9)).filter(ImageFilter.GaussianBlur(side * 0.022)), np.float32)[..., None] / 255
+    over(np.zeros_like(rgb) + np.array([0.05, 0.035, 0.028], np.float32), halo, 0, 0, 0.72)
     over(np.zeros_like(rgb) + np.array([0.06, 0.04, 0.03], np.float32), contact_shadow(alpha, side), 0, 0, 1.0)
     over(rgb, alpha, 0, 0, 1.0)
     bright = np.clip((col.mean(-1, keepdims=True) - 0.68) / 0.32, 0, 1) * col * acc

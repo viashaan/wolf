@@ -1,0 +1,84 @@
+#!/usr/bin/env python3
+"""Seedance clip (wolf on a plain plate) -> app loop with alpha.
+Per frame: key the wolf against the plate colour measured once from the first frame, ladder-scale,
+muted horizontal ghost, the same warm pool of light as the stills (fixed for the whole clip from the
+first frame's bounds), light bloom, straight alpha. Frames go out as RGBA PNGs and are encoded as
+HEVC with alpha (hvc1) for iOS Safari, plus a poster WebP. Usage: process_video2.py N raw.mp4"""
+import os, sys, subprocess, shutil, numpy as np
+from PIL import Image, ImageFilter
+ROOT = os.path.expanduser("~/Documents/wolf/img")
+ZOOM = {1: 1.04, 2: 1.02, 3: 0.97, 4: 0.98, 5: 1.00, 6: 1.03, 7: 1.06, 8: 1.10, 9: 1.14, 10: 1.18}
+S = 1000; OUT = 720; FPS = 24
+CENTRE = np.array([0x3E, 0x2E, 0x1C], np.float32) / 255
+RIM    = np.array([0x22, 0x1A, 0x13], np.float32) / 255
+
+def hblur(a, k):
+    pad = k // 2; p = np.pad(a, ((0, 0), (pad, pad), (0, 0)), mode="edge")
+    c = np.cumsum(p, axis=1); c = np.concatenate([np.zeros_like(c[:, :1]), c], axis=1)
+    return (c[:, k:] - c[:, :-k]) / k
+
+def plate_colour(img):
+    a = np.asarray(img.convert("RGB"), np.float32)
+    edge = np.concatenate([a[:40].reshape(-1, 3), a[-40:].reshape(-1, 3), a[:, :40].reshape(-1, 3), a[:, -40:].reshape(-1, 3)])
+    return np.median(edge, axis=0)
+
+def key(img, bg):
+    a = np.asarray(img.convert("RGB").filter(ImageFilter.GaussianBlur(0.8)), np.float32)
+    d = np.sqrt(((a - bg) ** 2).sum(-1))
+    alpha = np.clip((d - 22) / 40, 0, 1)
+    alpha = np.asarray(Image.fromarray((alpha * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(1.0)), np.float32) / 255
+    return np.asarray(img.convert("RGB"), np.float32) / 255, alpha[..., None]
+
+def pool(cy):
+    y, x = np.mgrid[0:S, 0:S].astype(np.float32)
+    r = np.sqrt(((x - S / 2) / (S * 0.50)) ** 2 + ((y - cy) / (S * 0.36)) ** 2)
+    t = np.clip(r, 0, 1)[..., None]; t = t * t * (3 - 2 * t)
+    col = CENTRE * (1 - t) + RIM * t
+    a = 1 - np.clip((r - 0.28) / 0.72, 0, 1); a = a * a * (3 - 2 * a)
+    return col, a[..., None]
+
+def run(n, src):
+    z = ZOOM[n]; side = int(1220 * z * S / 1520)
+    ox = (S - side) // 2; oy = max(0, min(S - side, (S - side) // 2 + int((1 - z) * 60 * S / 1520)))
+    tmp = os.path.expanduser(f"~/Documents/wolf/img/raw/wolfvid2/{n:02d}"); shutil.rmtree(tmp, ignore_errors=True); os.makedirs(tmp)
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", src, "-vf", f"fps={FPS},scale={side}:{side}:flags=lanczos", f"{tmp}/in_%04d.png"], check=True)
+    frames = sorted(f for f in os.listdir(tmp) if f.startswith("in_"))
+    first = Image.open(f"{tmp}/{frames[0]}"); bg = plate_colour(first)
+    _, a0 = key(first, bg); rows = np.where(a0[..., 0].max(1) > 0.5)[0]
+    cy = oy + (rows.min() + rows.max()) / 2 if len(rows) else S / 2
+    pcol, pacc = pool(cy)
+    grey_w = np.array([0.3, 0.59, 0.11], np.float32); warm = np.array([1.0, 0.86, 0.66], np.float32)
+    ks = ((int(side * 0.16) | 1, min(int(side * 0.09), ox), 0.42), (int(side * 0.07) | 1, min(int(side * 0.04), ox), 0.30))
+    for i, f in enumerate(frames):
+        rgb, alpha = key(Image.open(f"{tmp}/{f}"), bg)
+        col = pcol.copy(); acc = pacc.copy()
+        def over(lrgb, la, dx, gain):
+            ys, xs = slice(oy, oy + side), slice(ox + dx, ox + dx + side)
+            a = la * gain
+            col[ys, xs] = col[ys, xs] * (1 - a) + lrgb * a
+            acc[ys, xs] = acc[ys, xs] + a * (1 - acc[ys, xs])
+        prem = rgb * alpha; grey = (prem @ grey_w)[..., None]
+        for k, dx, gain in ks:
+            g_rgb = hblur(prem * 0.45 + grey * 0.55, k) * warm; g_a = hblur(alpha, k)
+            g_col = np.where(g_a > 1e-4, g_rgb / np.maximum(g_a, 1e-4), 0)
+            over(g_col, g_a, dx, gain); over(g_col, g_a, -dx // 2, gain * 0.6)
+        over(rgb, alpha, 0, 1.0)
+        bright = np.clip((col.mean(-1, keepdims=True) - 0.55) / 0.45, 0, 1) * col * acc
+        bl = np.asarray(Image.fromarray((np.clip(bright, 0, 1) * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(18)), np.float32) / 255
+        col = 1 - (1 - col) * (1 - bl * 0.35)
+        out = np.concatenate([np.clip(col, 0, 1), np.clip(acc, 0, 1)], axis=-1)
+        Image.fromarray((out * 255).astype(np.uint8), "RGBA").resize((OUT, OUT), Image.LANCZOS).save(f"{tmp}/out_{i:04d}.png")
+    # cross-blend the tail into the head so the loop closes even if the model drifted
+    N = len(frames); X = min(10, N // 4)
+    for j in range(X):
+        t = (j + 1) / (X + 1)
+        a = np.asarray(Image.open(f"{tmp}/out_{N - X + j:04d}.png"), np.float32); b = np.asarray(Image.open(f"{tmp}/out_{j:04d}.png"), np.float32)
+        Image.fromarray((a * (1 - t) + b * t).astype(np.uint8), "RGBA").save(f"{tmp}/out_{N - X + j:04d}.png")
+    dst = f"{ROOT}/wolf/{n:02d}.mp4"
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-framerate", str(FPS), "-i", f"{tmp}/out_%04d.png",
+                    "-c:v", "hevc_videotoolbox", "-pix_fmt", "bgra", "-alpha_quality", "0.85", "-q:v", "62", "-tag:v", "hvc1",
+                    "-movflags", "+faststart", "-an", dst], check=True)
+    print(dst, os.path.getsize(dst) // 1024, "KB", N, "frames")
+
+if __name__ == "__main__":
+    run(int(sys.argv[1]), sys.argv[2])

@@ -1,11 +1,17 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Wolf sounds</title>
-<style>body{margin:0;background:#141210;color:#EFE9DF;font-family:-apple-system,Helvetica,sans-serif;padding:24px 18px}h1{font-size:20px;margin:0 0 6px}p{color:#B3A793;font-size:13px;margin:0 0 18px}
-.b{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:56px;margin:0 0 8px;padding:0 16px;border-radius:14px;border:1px solid rgba(239,233,223,.18);background:rgba(239,233,223,.05);color:#EFE9DF;font:inherit;font-size:16px;text-align:left}.b small{color:#B3A793;font-size:12px}.b:active{background:#F7CE4A;color:#1A1204}</style></head><body>
-<h1>Wolf sounds</h1><p>Tap each one. Built from your own SFX packs.</p>
+<style>body{margin:0;background:#141210;color:#EFE9DF;font-family:-apple-system,Helvetica,sans-serif;padding:24px 18px 60px}h1{font-size:20px;margin:0 0 4px}h2{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#F7CE4A;margin:26px 0 10px}p{color:#B3A793;font-size:13px;margin:0 0 6px}
+.b{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:54px;margin:0 0 8px;padding:0 16px;border-radius:14px;border:1px solid rgba(239,233,223,.18);background:rgba(239,233,223,.05);color:#EFE9DF;font:inherit;font-size:15px;text-align:left}.b small{color:#B3A793;font-size:12px;text-align:right}.b:active{background:#F7CE4A;color:#1A1204}</style></head><body>
+<h1>Wolf sounds</h1><p>Two directions. Tap through both and tell me which set, or mix and match by name.</p>
 <div id="l"></div>
 <script>
-const S=[["tick","habit ticked (pitch rises through the day)"],["untick","habit unticked"],["complete","last habit of the day"],["checkin","done for tonight"],["milestone","7 / 14 / 21 / 30 nights"],["stageup","wolf grows a stage"],["stagedown","wolf loses a stage"],["click","day arrows, row open"]];
+const EV=[["tick","habit ticked"],["untick","habit unticked"],["complete","last habit of the day"],["checkin","done for tonight"],["milestone","7 / 14 / 21 / 30 nights"],["stageup","wolf grows"],["stagedown","wolf shrinks"],["click","arrows, row open"]];
+const SETS=[
+ ["Warm (built from your kalimba, wood and felt samples)", EV.map(([n,d])=>[n,d,`sfx/warm/${n}.mp3`])],
+ ["Calm (generated, recorded-instrument prompts)", [["tick A","kalimba",`sfx/calm/tick-kalimba-a.mp3`],["tick B","felt piano",`sfx/calm/tick-kalimba-b.mp3`],["tick C","tongue drum",`sfx/calm/tick-tongue-a.mp3`],["complete A","kalimba rise",`sfx/calm/complete-a.mp3`],["complete B","felt piano rise",`sfx/calm/complete-b.mp3`],["checkin A","bedtime bell + breath",`sfx/calm/checkin-a.mp3`],["checkin B","descending kalimba",`sfx/calm/checkin-b.mp3`],["milestone A","kalimba + bell",`sfx/calm/milestone-a.mp3`],["stageup A","swell into bell",`sfx/calm/stageup-a.mp3`],["stagedown A","thud, two notes down",`sfx/calm/stagedown-a.mp3`],["click A","felt tap",`sfx/calm/click-a.mp3`]]],
+ ["Current (v3.0, the punchy set)", EV.map(([n,d])=>[n,d,`sfx/${n}.mp3`])]
+];
 let ctx,buf={};const ensure=()=>{if(!ctx)ctx=new (window.AudioContext||window.webkitAudioContext)();if(ctx.state==="suspended")ctx.resume();return ctx};
-async function play(n,rate=1){const c=ensure();if(!buf[n]){const r=await fetch(`sfx/${n}.mp3`);buf[n]=await c.decodeAudioData(await r.arrayBuffer())}const s=c.createBufferSource();s.buffer=buf[n];s.playbackRate.value=rate;s.connect(c.destination);s.start()}
-let t=0;S.forEach(([n,d])=>{const b=document.createElement("button");b.className="b";b.innerHTML=`<span>${n}</span><small>${d}</small>`;b.onclick=()=>{if(n==="tick"){play(n,0.95+0.19*((t++%11)/10))}else play(n)};document.getElementById("l").appendChild(b)});
+async function play(u,rate=1){const c=ensure();if(!buf[u]){const r=await fetch(u);buf[u]=await c.decodeAudioData(await r.arrayBuffer())}const s=c.createBufferSource();s.buffer=buf[u];s.playbackRate.value=rate;s.connect(c.destination);s.start()}
+const L=document.getElementById("l");let t=0;
+SETS.forEach(([title,items])=>{const h=document.createElement("h2");h.textContent=title;L.appendChild(h);items.forEach(([n,d,u])=>{const b=document.createElement("button");b.className="b";b.innerHTML=`<span>${n}</span><small>${d}</small>`;b.onclick=()=>play(u,n.startsWith("tick")&&!n.startsWith("tick C")?0.95+0.19*((t++%11)/10):1);L.appendChild(b)})});
 </script></body></html>

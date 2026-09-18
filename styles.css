@@ -23,10 +23,10 @@
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 [hidden]{display:none!important}
-html,body{height:100%;overflow:hidden;max-width:100%}
+html{height:100%;overflow:hidden}html,body{overflow:hidden;max-width:100%}
 body{
   margin:0;background:var(--ground);color:var(--bone);
-  position:fixed;inset:0;width:100%;height:100%;display:flex;flex-direction:column;
+  position:fixed;top:0;left:0;width:100vw;height:100vh;height:100lvh;display:flex;flex-direction:column;
   font-family:var(--sans);font-weight:500;font-size:15px;line-height:1.5;
   -webkit-font-smoothing:antialiased;overscroll-behavior-y:none;-webkit-user-select:none;user-select:none;
 }
@@ -228,6 +228,7 @@ input[type="number"]::-webkit-inner-spin-button{-webkit-appearance:none}
 .sheet-copy strong{color:var(--bone);font-weight:500}
 .sheet-row{display:flex;gap:10px}
 .sheet-status{font-size:13px;color:var(--ash);font-variant-numeric:tabular-nums}
+.dbg{font-family:"Archivo",monospace;font-size:11px;color:var(--ash-2);letter-spacing:.04em}
 .rule{border:0;border-top:1px solid var(--line);margin:4px 0}
 
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}

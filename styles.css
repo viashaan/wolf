@@ -23,7 +23,7 @@
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 [hidden]{display:none!important}
-html,body{height:100%}
+html,body{height:100%;overflow-x:hidden;max-width:100%}
 body{
   margin:0;background:var(--ground);color:var(--bone);
   font-family:var(--sans);font-weight:500;font-size:15px;line-height:1.5;
@@ -64,7 +64,7 @@ h1,h2,p{margin:0}
 .icon-btn svg{width:20px;height:20px}
 
 /* ---------- views ---------- */
-main{position:relative;z-index:1;padding:0 18px calc(var(--tabs-h) + var(--sab) + 28px)}
+main{position:relative;z-index:1;padding:0 18px calc(var(--tabs-h) + var(--sab) + 28px);overflow-x:clip}
 .view{display:flex;flex-direction:column;gap:18px;animation:rise .28s var(--ease)}
 @keyframes rise{from{opacity:.001;transform:translateY(6px)}}
 .view.home{align-items:center;text-align:center;gap:10px}
@@ -279,7 +279,7 @@ input[type="number"]::-webkit-inner-spin-button{-webkit-appearance:none}
 @media (prefers-reduced-motion:reduce){#wolfArt,#brainArt,#brainArt img{animation:none}}
 
 /* ---------- flickering bloom ---------- */
-.flick{position:absolute;inset:-6%;pointer-events:none;mix-blend-mode:screen;
+.flick{position:absolute;inset:0;pointer-events:none;mix-blend-mode:screen;
   background:radial-gradient(ellipse 48% 40% at 50% 46%,rgba(247,206,74,.34),rgba(216,128,43,.12) 45%,transparent 72%);
   animation:flick 7.3s linear infinite;
   -webkit-mask-image:radial-gradient(ellipse 50% 50% at 50% 50%,#000 40%,transparent 80%);mask-image:radial-gradient(ellipse 50% 50% at 50% 50%,#000 40%,transparent 80%);}

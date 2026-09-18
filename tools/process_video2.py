@@ -22,24 +22,17 @@ def plate_colour(img):
     edge = np.concatenate([a[:40].reshape(-1, 3), a[-40:].reshape(-1, 3), a[:, :40].reshape(-1, 3), a[:, -40:].reshape(-1, 3)])
     return np.median(edge, axis=0)
 
-def key(img, bg=None):
-    """Plate is flat (noise under 5 levels), so key tight, then fill holes so dark fur inside the silhouette stays."""
+def key(img, bg, mt=None):
+    """Alpha = BiRefNet matte (solid silhouette, stable frame to frame) plus the tight chroma key for loose fur
+    strands, but only within a few pixels of the matte so the plate never leaks."""
     from scipy import ndimage
     a = np.asarray(img.convert("RGB").filter(ImageFilter.GaussianBlur(0.6)), np.float32)
-    if bg is None:
-        edge = np.concatenate([a[:50].reshape(-1, 3), a[-50:].reshape(-1, 3), a[:, :50].reshape(-1, 3), a[:, -50:].reshape(-1, 3)])
-        bg = np.median(edge, axis=0)
     d = np.sqrt(((a - bg) ** 2).sum(-1))
-    alpha = np.clip((d - 7) / 10, 0, 1)
-    hard = alpha > 0.5
-    hard = ndimage.binary_closing(hard, iterations=4)
-    hard = ndimage.binary_fill_holes(hard)
-    lab, k = ndimage.label(hard)
-    if k > 1:   # keep the big blobs only (the wolf), drop plate specks
-        sizes = ndimage.sum(hard, lab, range(1, k + 1)); keep = np.isin(lab, [i + 1 for i, s in enumerate(sizes) if s > 0.002 * hard.size])
-        hard = keep
-    alpha = np.maximum(alpha, hard.astype(np.float32)) * ndimage.binary_dilation(hard, iterations=3)
-    alpha = np.asarray(Image.fromarray((alpha * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(0.8)), np.float32) / 255
+    chroma = np.clip((d - 7) / 10, 0, 1)
+    m = np.asarray(mt.convert("L"), np.float32) / 255 if mt is not None else chroma
+    near = ndimage.binary_dilation(m > 0.5, iterations=4)
+    alpha = np.maximum(m, chroma * near)
+    alpha = np.asarray(Image.fromarray((alpha * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(0.6)), np.float32) / 255
     return np.asarray(img.convert("RGB"), np.float32) / 255, alpha[..., None]
 
 def pool(cy):
@@ -59,17 +52,20 @@ def premultiply(path):
 def run(n, src):
     z = ZOOM[n]; side = int(1220 * z * S / 1520)
     ox = (S - side) // 2; oy = max(0, min(S - side, (S - side) // 2 + int((1 - z) * 60 * S / 1520)))
-    tmp = os.path.expanduser(f"~/Documents/wolf/img/raw/wolfvid2/{n:02d}"); shutil.rmtree(tmp, ignore_errors=True); os.makedirs(tmp)
-    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", src, "-vf", f"fps={FPS},scale={side}:{side}:flags=lanczos", f"{tmp}/in_%04d.png"], check=True)
+    tmp = os.path.expanduser(f"~/Documents/wolf/img/raw/wolfvid2/{n:02d}"); os.makedirs(tmp, exist_ok=True)
+    if not any(f.startswith("in_") for f in os.listdir(tmp)):   # keep extracted frames (and their mattes) between runs
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", src, "-vf", f"fps={FPS},scale={side}:{side}:flags=lanczos", f"{tmp}/in_%04d.png"], check=True)
     frames = sorted(f for f in os.listdir(tmp) if f.startswith("in_"))
     first = Image.open(f"{tmp}/{frames[0]}"); bg = plate_colour(first)
-    _, a0 = key(first, bg); rows = np.where(a0[..., 0].max(1) > 0.5)[0]
+    def mt_for(f):
+        p = f"{tmp}/mt_{f[3:]}"; return Image.open(p) if os.path.exists(p) else None
+    _, a0 = key(first, bg, mt_for(frames[0])); rows = np.where(a0[..., 0].max(1) > 0.5)[0]
     cy = oy + (rows.min() + rows.max()) / 2 if len(rows) else S / 2
     pcol, pacc = pool(cy)
     grey_w = np.array([0.3, 0.59, 0.11], np.float32); warm = np.array([1.0, 0.86, 0.66], np.float32)
     ks = ((int(side * 0.16) | 1, min(int(side * 0.09), ox), 0.42), (int(side * 0.07) | 1, min(int(side * 0.04), ox), 0.30))
     for i, f in enumerate(frames):
-        rgb, alpha = key(Image.open(f"{tmp}/{f}"), bg)
+        rgb, alpha = key(Image.open(f"{tmp}/{f}"), bg, mt_for(f))
         col = pcol.copy(); acc = pacc.copy()
         def over(lrgb, la, dx, gain):
             ys, xs = slice(oy, oy + side), slice(ox + dx, ox + dx + side)

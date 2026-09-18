@@ -15,24 +15,17 @@ def hblur(a, k):
     c = np.cumsum(p, axis=1); c = np.concatenate([np.zeros_like(c[:, :1]), c], axis=1)
     return (c[:, k:] - c[:, :-k]) / k
 
-def key(img, bg=None):
-    """Plate is flat (noise under 5 levels), so key tight, then fill holes so dark fur inside the silhouette stays."""
+def key(img, mt=None):
     from scipy import ndimage
     a = np.asarray(img.convert("RGB").filter(ImageFilter.GaussianBlur(0.6)), np.float32)
-    if bg is None:
-        edge = np.concatenate([a[:50].reshape(-1, 3), a[-50:].reshape(-1, 3), a[:, :50].reshape(-1, 3), a[:, -50:].reshape(-1, 3)])
-        bg = np.median(edge, axis=0)
+    edge = np.concatenate([a[:50].reshape(-1, 3), a[-50:].reshape(-1, 3), a[:, :50].reshape(-1, 3), a[:, -50:].reshape(-1, 3)])
+    bg = np.median(edge, axis=0)
     d = np.sqrt(((a - bg) ** 2).sum(-1))
-    alpha = np.clip((d - 7) / 10, 0, 1)
-    hard = alpha > 0.5
-    hard = ndimage.binary_closing(hard, iterations=4)
-    hard = ndimage.binary_fill_holes(hard)
-    lab, k = ndimage.label(hard)
-    if k > 1:   # keep the big blobs only (the wolf), drop plate specks
-        sizes = ndimage.sum(hard, lab, range(1, k + 1)); keep = np.isin(lab, [i + 1 for i, s in enumerate(sizes) if s > 0.002 * hard.size])
-        hard = keep
-    alpha = np.maximum(alpha, hard.astype(np.float32)) * ndimage.binary_dilation(hard, iterations=3)
-    alpha = np.asarray(Image.fromarray((alpha * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(0.8)), np.float32) / 255
+    chroma = np.clip((d - 7) / 10, 0, 1)
+    m = np.asarray(mt.convert("L").resize(img.size, Image.LANCZOS), np.float32) / 255 if mt is not None else chroma
+    near = ndimage.binary_dilation(m > 0.5, iterations=4)
+    alpha = np.maximum(m, chroma * near)
+    alpha = np.asarray(Image.fromarray((alpha * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(0.6)), np.float32) / 255
     return np.asarray(img.convert("RGB"), np.float32) / 255, alpha[..., None]
 
 def pool(cy):
@@ -48,7 +41,8 @@ def stage(n, src, dst):
     img = Image.open(src).convert("RGB")
     z = ZOOM[n]; side = int(1220 * z)
     img = img.resize((side, side), Image.LANCZOS)
-    rgb, alpha = key(img)
+    mp = src[:-4] + ".matte.png"
+    rgb, alpha = key(img, Image.open(mp) if os.path.exists(mp) else None)
     ox = (S - side) // 2; oy = max(0, min(S - side, (S - side) // 2 + int((1 - z) * 60)))
     ys_w = np.where(alpha[..., 0].max(1) > 0.5)[0]; cy = oy + (ys_w.min() + ys_w.max()) / 2 if len(ys_w) else S / 2
     col, acc = pool(cy); col = col.copy(); acc = acc.copy()

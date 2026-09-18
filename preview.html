@@ -27,7 +27,7 @@
 <div class="pv">
   <h1>Wolf, 1 to 10</h1>
   <div class="stagebox">
-    <div class="hero"><div class="stage-art" id="wolfArt"><video class="a" id="wolfImg" muted autoplay loop playsinline disablepictureinpicture poster="img/wolf/01.webp?v=45" ></video><span class="flick"></span><span class="flick b"></span></div></div>
+    <div class="hero"><div class="stage-art" id="wolfArt"><video class="a" id="wolfImg" muted autoplay loop playsinline disablepictureinpicture poster="img/wolf/01.webp?v=46" ></video><span class="flick"></span><span class="flick b"></span></div></div>
     <div class="ctl"><button id="wPrev">‹</button><input type="range" id="wRange" min="1" max="10" value="1"><span class="n" id="wN">1</span><button id="wNext">›</button></div>
     <button class="btn play" id="wPlay">Play</button>
   </div>
@@ -79,10 +79,10 @@ for (const k in O){
   s.insertAdjacentHTML('beforeend',`<div class="ico"><span class="ic"><svg viewBox="0 0 20 20" fill="currentColor">${S[k]}</svg></span><span>${names[k]}</span></div>`);
 }
 function wire(kind,img,range,n,prev,next,play){
-  const set=v=>{v=Math.min(10,Math.max(1,v));range.value=v;n.textContent=v;if(img.tagName==='VIDEO'){img.poster=`img/${kind}/${String(v).padStart(2,'0')}.webp`;img.src=`img/${kind}/${String(v).padStart(2,'0')}.${EXT}?v=9`;img.play().catch(()=>{});}else{img.src=`img/${kind}/${String(v).padStart(2,'0')}.webp?v=45`;}};
+  const set=v=>{v=Math.min(10,Math.max(1,v));range.value=v;n.textContent=v;if(img.tagName==='VIDEO'){img.poster=`img/${kind}/${String(v).padStart(2,'0')}.webp`;img.src=`img/${kind}/${String(v).padStart(2,'0')}.${EXT}?v=9`;img.play().catch(()=>{});}else{img.src=`img/${kind}/${String(v).padStart(2,'0')}.webp?v=46`;}};
   range.oninput=()=>set(+range.value); prev.onclick=()=>set(+range.value-1); next.onclick=()=>set(+range.value+1);
   let t=null; play.onclick=()=>{ if(t){clearInterval(t);t=null;play.textContent='Play';return;} let v=1,dir=1; set(1); play.textContent='Stop'; t=setInterval(()=>{v+=dir; if(v>=10||v<=1) dir=-dir; set(v);},kind==='wolf'?2500:450); };
-  for (let i=1;i<=10;i++){ new Image().src=`img/${kind}/${String(i).padStart(2,'0')}.webp?v=45`; }
+  for (let i=1;i<=10;i++){ new Image().src=`img/${kind}/${String(i).padStart(2,'0')}.webp?v=46`; }
 }
 const EXT=/Apple/.test(navigator.vendor)?'mp4':'webm';
 wire('wolf',document.getElementById('wolfImg'),wRange,wN,wPrev,wNext,wPlay); (function(){const v=document.getElementById('wolfImg');v.src=`img/wolf/01.${EXT}?v=9`;const kick=()=>{v.muted=true;v.play().catch(()=>{});};kick();document.addEventListener('visibilitychange',kick);document.addEventListener('pointerdown',kick);})(); wire('brain',brainImg,bRange,bN,bPrev,bNext,bPlay);

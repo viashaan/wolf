@@ -30,8 +30,10 @@ def key(img, bg, mt=None):
     d = np.sqrt(((a - bg) ** 2).sum(-1))
     chroma = np.clip((d - 7) / 10, 0, 1)
     m = np.asarray(mt.convert("L"), np.float32) / 255 if mt is not None else chroma
+    # matte is trusted for the interior only; the outer band goes by plate-likeness so the matte's ring of plate drops out
+    core = ndimage.binary_erosion(m > 0.5, iterations=3)
     near = ndimage.binary_dilation(m > 0.5, iterations=4)
-    alpha = np.maximum(m, chroma * near)
+    alpha = np.where(core, 1.0, np.clip((d - 6) / 14, 0, 1) * near).astype(np.float32)
     alpha = np.asarray(Image.fromarray((alpha * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(0.6)), np.float32) / 255
     alpha = np.clip((alpha - 0.12) / 0.88, 0, 1)                      # pull the edge in a hair
     rgb = np.asarray(img.convert("RGB"), np.float32) / 255

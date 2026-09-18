@@ -268,3 +268,21 @@ input[type="number"]::-webkit-inner-spin-button{-webkit-appearance:none}
 .block li{position:relative;padding-left:14px;font-size:14.5px;line-height:1.45;color:var(--ash)}
 .block.now li{color:var(--bone)}
 .block li::before{content:"";position:absolute;left:0;top:.68em;width:6px;height:1px;background:var(--line-2)}
+
+/* ---------- life ---------- */
+#wolfArt{animation:breathe 4.2s ease-in-out infinite;transform-origin:50% 62%}
+#brainArt{animation:float 5.6s ease-in-out infinite;transform-origin:50% 50%}
+#brainArt img{animation:pulse-glow 5.6s ease-in-out infinite}
+@keyframes breathe{0%,100%{transform:scale(1) translateY(0)}45%{transform:scale(1.022) translateY(-2px)}60%{transform:scale(1.018) translateY(-1px)}}
+@keyframes float{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-5px) scale(1.012)}}
+@keyframes pulse-glow{0%,100%{filter:drop-shadow(0 0 30px rgba(247,206,74,.16)) brightness(1)}50%{filter:drop-shadow(0 0 40px rgba(247,206,74,.30)) brightness(1.04)}}
+@media (prefers-reduced-motion:reduce){#wolfArt,#brainArt,#brainArt img{animation:none}}
+
+/* ---------- flickering bloom ---------- */
+.flick{position:absolute;inset:-6%;pointer-events:none;mix-blend-mode:screen;
+  background:radial-gradient(ellipse 48% 40% at 50% 46%,rgba(247,206,74,.34),rgba(216,128,43,.12) 45%,transparent 72%);
+  animation:flick 7.3s linear infinite;
+  -webkit-mask-image:radial-gradient(ellipse 50% 50% at 50% 50%,#000 40%,transparent 80%);mask-image:radial-gradient(ellipse 50% 50% at 50% 50%,#000 40%,transparent 80%);}
+.flick.b{animation-duration:11.1s;animation-delay:-3s;background:radial-gradient(ellipse 60% 30% at 40% 60%,rgba(247,206,74,.22),transparent 70%)}
+@keyframes flick{0%{opacity:.55}7%{opacity:.9}11%{opacity:.5}19%{opacity:.75}26%{opacity:.35}33%{opacity:.8}41%{opacity:.6}47%{opacity:1}53%{opacity:.45}62%{opacity:.7}70%{opacity:.4}78%{opacity:.85}86%{opacity:.5}93%{opacity:.7}100%{opacity:.55}}
+@media (prefers-reduced-motion:reduce){.flick{animation:none;opacity:.5}}

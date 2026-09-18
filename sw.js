@@ -10,7 +10,7 @@ const SHELL = [
   "./img/icon-180.png", "./img/icon-512.png",
   "./img/bg/01.webp", "./img/bg/02.webp", "./img/bg/03.webp", "./img/bg/04.webp",
   ...STAGES,
-  ...["tick","untick","complete","checkin","milestone","stageup","stagedown","click"].map((n) => `./sfx/${n}.mp3`)
+  ...["tick","untick","complete","checkin","milestone","stageup","stagedown","click"].map((n) => `./sfx/${n}.mp3`), "./sfx/silence.mp3"
 ];
 
 self.addEventListener("install", (e) => {

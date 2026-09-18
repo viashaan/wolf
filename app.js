@@ -3,7 +3,7 @@
   "use strict";
   const P = window.PLAN;
   const $ = (s) => document.querySelector(s);
-  const VERSION = "3.1";
+  const VERSION = "3.2";
   try { const qs = new URLSearchParams(location.search); if (/^\d{4}-\d{2}-\d{2}$/.test(qs.get("start") || "")) P.start = qs.get("start"); } catch {}
 
   /* ---------- dates ---------- */
@@ -47,8 +47,13 @@
       const g = c.createGain(); g.gain.value = o.gain == null ? 1 : o.gain;
       src.connect(g); g.connect(c.destination); src.start(c.currentTime + (o.delay || 0));
     }
-    const unlock = () => { ensure(); preload(); };
-    ["touchstart", "pointerdown", "keydown"].forEach((ev) => addEventListener(ev, unlock, { once: true, passive: true }));
+    // iOS: Web Audio obeys the ringer switch, media elements do not. Playing a silent <audio>
+    // inside the first real tap moves the audio session to "playback", after which Web Audio
+    // plays with the phone on silent. Must happen on touchend/click, not touchstart.
+    let unlocked = false; const silent = new Audio("sfx/silence.mp3"); silent.loop = true; silent.setAttribute("playsinline", ""); silent.volume = 0.01;
+    const unlock = () => { if (unlocked) return; unlocked = true; silent.play().catch(() => {}); ensure(); preload(); };
+    ["touchend", "click", "keydown"].forEach((ev) => addEventListener(ev, unlock, { once: true, capture: true }));
+    document.addEventListener("visibilitychange", () => { if (!document.hidden && unlocked) { silent.play().catch(() => {}); ensure(); } });
     return { play, preload };
   })();
   const blank = (date) => ({ date, day: dayIndex(date), done: {}, times: {}, ig: "", checkedIn: false, checkedInAt: 0, updated: 0 });

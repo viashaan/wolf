@@ -288,3 +288,10 @@ input[type="number"]::-webkit-inner-spin-button{-webkit-appearance:none}
 .flick.b{animation-duration:11.1s;animation-delay:-3s;background:radial-gradient(ellipse 60% 30% at 40% 60%,rgba(247,206,74,.22),transparent 70%)}
 @keyframes flick{0%{opacity:.55}7%{opacity:.9}11%{opacity:.5}19%{opacity:.75}26%{opacity:.35}33%{opacity:.8}41%{opacity:.6}47%{opacity:1}53%{opacity:.45}62%{opacity:.7}70%{opacity:.4}78%{opacity:.85}86%{opacity:.5}93%{opacity:.7}100%{opacity:.55}}
 @media (prefers-reduced-motion:reduce){.flick{animation:none;opacity:.5}}
+
+/* ---------- sound lab ---------- */
+.lab{display:flex;flex-direction:column;gap:10px}
+.lab select{
+  width:100%;min-height:44px;padding:8px 12px;border-radius:10px;border:1px solid var(--line);
+  background:rgba(239,233,223,.06);color:var(--bone);font:inherit;font-size:15px;appearance:none;-webkit-appearance:none;
+}

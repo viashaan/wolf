@@ -3,7 +3,7 @@
   "use strict";
   const P = window.PLAN;
   const $ = (s) => document.querySelector(s);
-  const VERSION = "3.0";
+  const VERSION = "3.1";
   try { const qs = new URLSearchParams(location.search); if (/^\d{4}-\d{2}-\d{2}$/.test(qs.get("start") || "")) P.start = qs.get("start"); } catch {}
 
   /* ---------- dates ---------- */
@@ -23,8 +23,8 @@
     get(k, f) { try { const v = localStorage.getItem(k); return v == null ? f : JSON.parse(v); } catch { return f; } },
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
   };
-  const store = { days: LS.get("wolf2.days", {}), token: LS.get("wolf.token", ""), pending: LS.get("wolf2.pending", []), lastSync: LS.get("wolf2.lastSync", null), sound: LS.get("wolf.sound", true) };
-  const persist = () => { LS.set("wolf2.days", store.days); LS.set("wolf.token", store.token); LS.set("wolf2.pending", store.pending); LS.set("wolf2.lastSync", store.lastSync); LS.set("wolf.sound", store.sound); };
+  const store = { days: LS.get("wolf2.days", {}), token: LS.get("wolf.token", ""), pending: LS.get("wolf2.pending", []), lastSync: LS.get("wolf2.lastSync", null), sound: LS.get("wolf.sound", true), sfxmap: LS.get("wolf.sfxmap", {}) };
+  const persist = () => { LS.set("wolf2.days", store.days); LS.set("wolf.token", store.token); LS.set("wolf2.pending", store.pending); LS.set("wolf2.lastSync", store.lastSync); LS.set("wolf.sound", store.sound); LS.set("wolf.sfxmap", store.sfxmap); };
 
   /* ---------- sound ---------- */
   // Eight short cues built from Shaan's own SFX library (tools/build_sfx.py). Web Audio so they
@@ -33,14 +33,17 @@
     const names = ["tick", "untick", "complete", "checkin", "milestone", "stageup", "stagedown", "click"];
     let ctx = null; const buf = {}; let loading = false;
     const ensure = () => { if (!ctx) { try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch { return null; } } if (ctx.state === "suspended") ctx.resume().catch(() => {}); return ctx; };
+    // Sound lab: store.sfxmap[event] can point an event at a candidate file. Default stays sfx/<event>.mp3.
+    const urlFor = (n) => store.sfxmap[n] || `sfx/${n}.mp3`;
+    async function fetchBuf(u) { if (buf[u]) return buf[u]; try { const r = await fetch(u); buf[u] = await ctx.decodeAudioData(await r.arrayBuffer()); } catch {} return buf[u]; }
     async function preload() {
       if (loading || !ensure()) return; loading = true;
-      await Promise.all(names.map(async (n) => { try { const r = await fetch(`sfx/${n}.mp3`); buf[n] = await ctx.decodeAudioData(await r.arrayBuffer()); } catch {} }));
+      await Promise.all(names.map((n) => fetchBuf(urlFor(n))));
     }
     function play(name, o = {}) {
       if (!store.sound) return; const c = ensure(); if (!c) return;
-      if (!buf[name]) { preload(); return; }
-      const src = c.createBufferSource(); src.buffer = buf[name]; src.playbackRate.value = o.rate || 1;
+      const u = urlFor(name); if (!buf[u]) { fetchBuf(u); return; }
+      const src = c.createBufferSource(); src.buffer = buf[u]; src.playbackRate.value = o.rate || 1;
       const g = c.createGain(); g.gain.value = o.gain == null ? 1 : o.gain;
       src.connect(g); g.connect(c.destination); src.start(c.currentTime + (o.delay || 0));
     }
@@ -404,6 +407,32 @@
   $("#btnPull").addEventListener("click", pullHistory); $("#ver").textContent = VERSION;
   const soundBtn = $("#btnSound"); const paintSound = () => { soundBtn.textContent = store.sound ? "Sounds on" : "Sounds off"; soundBtn.setAttribute("aria-pressed", store.sound ? "true" : "false"); };
   paintSound(); soundBtn.addEventListener("click", () => { store.sound = !store.sound; persist(); paintSound(); if (store.sound) SFX.play("tick"); });
+  // Sound lab: try any candidate inside the real app without changing the shipped defaults.
+  const LAB = {
+    tick: [["warm kalimba", "sfx/warm/tick.mp3"], ["calm A kalimba", "sfx/calm/tick-kalimba-a.mp3"], ["calm B felt piano", "sfx/calm/tick-kalimba-b.mp3"], ["calm C tongue drum", "sfx/calm/tick-tongue-a.mp3"]],
+    untick: [["warm", "sfx/warm/untick.mp3"]],
+    complete: [["bowl", "sfx/calm2/complete-bowl.mp3"], ["gong", "sfx/calm2/complete-gong.mp3"], ["felt note", "sfx/calm2/complete-felt.mp3"], ["water drop", "sfx/calm2/complete-drop.mp3"], ["warm kalimba rise", "sfx/warm/complete.mp3"], ["calm A", "sfx/calm/complete-a.mp3"], ["calm B", "sfx/calm/complete-b.mp3"]],
+    checkin: [["bowl + exhale", "sfx/calm2/checkin-bowl.mp3"], ["gong swell", "sfx/calm2/checkin-gong.mp3"], ["felt chord", "sfx/calm2/checkin-felt.mp3"], ["warm", "sfx/warm/checkin.mp3"], ["calm A", "sfx/calm/checkin-a.mp3"], ["calm B", "sfx/calm/checkin-b.mp3"]],
+    milestone: [["two bowls", "sfx/calm2/milestone-bowl.mp3"], ["gong shimmer", "sfx/calm2/milestone-gong.mp3"], ["warm", "sfx/warm/milestone.mp3"], ["calm A", "sfx/calm/milestone-a.mp3"]],
+    stageup: [["warm swell", "sfx/warm/stageup.mp3"], ["calm A", "sfx/calm/stageup-a.mp3"]],
+    stagedown: [["felt low", "sfx/calm2/stagedown-felt.mp3"], ["warm", "sfx/warm/stagedown.mp3"], ["calm A", "sfx/calm/stagedown-a.mp3"]],
+    click: [["paper", "sfx/calm2/click-paper.mp3"], ["wood", "sfx/calm2/click-wood.mp3"], ["felt", "sfx/calm2/click-felt.mp3"], ["warm felt marble", "sfx/warm/click.mp3"], ["calm A", "sfx/calm/click-a.mp3"]]
+  };
+  const labHost = $("#lab");
+  function paintLab() {
+    labHost.innerHTML = "";
+    Object.keys(LAB).forEach((ev) => {
+      const row = document.createElement("label"); row.className = "field wide";
+      const sel = document.createElement("select"); sel.dataset.ev = ev;
+      sel.innerHTML = `<option value="">current</option>` + LAB[ev].map(([l, u]) => `<option value="${u}"${store.sfxmap[ev] === u ? " selected" : ""}>${l}</option>`).join("");
+      sel.addEventListener("change", () => { if (sel.value) store.sfxmap[ev] = sel.value; else delete store.sfxmap[ev]; persist(); SFX.play(ev); });
+      row.innerHTML = `<span>${ev}</span>`; row.appendChild(sel); labHost.appendChild(row);
+    });
+    const reset = document.createElement("button"); reset.type = "button"; reset.className = "btn ghost"; reset.textContent = "Back to defaults";
+    reset.addEventListener("click", () => { store.sfxmap = {}; persist(); paintLab(); });
+    labHost.appendChild(reset);
+  }
+  $("#btnLab").addEventListener("click", () => { labHost.hidden = !labHost.hidden; if (!labHost.hidden) paintLab(); });
   try { const sab = getComputedStyle(document.documentElement).getPropertyValue("--sab"); const tb = document.querySelector(".tabs").getBoundingClientRect().bottom; $("#dbg").textContent = `inner ${innerWidth}x${innerHeight} · screen ${screen.width}x${screen.height} · body ${document.body.getBoundingClientRect().height|0} · tabsBottom ${tb|0} · sab ${sab.trim() || "0"} · standalone ${!!navigator.standalone}`; } catch {}
 
   /* ---------- iOS standalone reserves the home-indicator strip itself; do not pad for it twice ---------- */

@@ -3,7 +3,7 @@
   "use strict";
   const P = window.PLAN;
   const $ = (s) => document.querySelector(s);
-  const VERSION = "2.9";
+  const VERSION = "3.0";
   try { const qs = new URLSearchParams(location.search); if (/^\d{4}-\d{2}-\d{2}$/.test(qs.get("start") || "")) P.start = qs.get("start"); } catch {}
 
   /* ---------- dates ---------- */
@@ -23,8 +23,31 @@
     get(k, f) { try { const v = localStorage.getItem(k); return v == null ? f : JSON.parse(v); } catch { return f; } },
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
   };
-  const store = { days: LS.get("wolf2.days", {}), token: LS.get("wolf.token", ""), pending: LS.get("wolf2.pending", []), lastSync: LS.get("wolf2.lastSync", null) };
-  const persist = () => { LS.set("wolf2.days", store.days); LS.set("wolf.token", store.token); LS.set("wolf2.pending", store.pending); LS.set("wolf2.lastSync", store.lastSync); };
+  const store = { days: LS.get("wolf2.days", {}), token: LS.get("wolf.token", ""), pending: LS.get("wolf2.pending", []), lastSync: LS.get("wolf2.lastSync", null), sound: LS.get("wolf.sound", true) };
+  const persist = () => { LS.set("wolf2.days", store.days); LS.set("wolf.token", store.token); LS.set("wolf2.pending", store.pending); LS.set("wolf2.lastSync", store.lastSync); LS.set("wolf.sound", store.sound); };
+
+  /* ---------- sound ---------- */
+  // Eight short cues built from Shaan's own SFX library (tools/build_sfx.py). Web Audio so they
+  // fire with no latency; the context unlocks on the first tap. Families vary by playbackRate.
+  const SFX = (() => {
+    const names = ["tick", "untick", "complete", "checkin", "milestone", "stageup", "stagedown", "click"];
+    let ctx = null; const buf = {}; let loading = false;
+    const ensure = () => { if (!ctx) { try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch { return null; } } if (ctx.state === "suspended") ctx.resume().catch(() => {}); return ctx; };
+    async function preload() {
+      if (loading || !ensure()) return; loading = true;
+      await Promise.all(names.map(async (n) => { try { const r = await fetch(`sfx/${n}.mp3`); buf[n] = await ctx.decodeAudioData(await r.arrayBuffer()); } catch {} }));
+    }
+    function play(name, o = {}) {
+      if (!store.sound) return; const c = ensure(); if (!c) return;
+      if (!buf[name]) { preload(); return; }
+      const src = c.createBufferSource(); src.buffer = buf[name]; src.playbackRate.value = o.rate || 1;
+      const g = c.createGain(); g.gain.value = o.gain == null ? 1 : o.gain;
+      src.connect(g); g.connect(c.destination); src.start(c.currentTime + (o.delay || 0));
+    }
+    const unlock = () => { ensure(); preload(); };
+    ["touchstart", "pointerdown", "keydown"].forEach((ev) => addEventListener(ev, unlock, { once: true, passive: true }));
+    return { play, preload };
+  })();
   const blank = (date) => ({ date, day: dayIndex(date), done: {}, times: {}, ig: "", checkedIn: false, checkedInAt: 0, updated: 0 });
   const rec = (date) => (store.days[date] ||= blank(date));
   const peek = (date) => store.days[date];
@@ -127,7 +150,8 @@
     const a = el.querySelector(".a"), b = el.querySelector(".b");
     if (shownStage[kind] === n) return;
     if (!shownStage[kind]) { load(a, kind, n); shownStage[kind] = n; return; }
-    shownStage[kind] = n;
+    const prev = shownStage[kind]; shownStage[kind] = n;
+    if (kind === "wolf" && !el.closest(".view").hidden) SFX.play(n > prev ? "stageup" : "stagedown", { rate: 1.12 - n * 0.03, gain: 0.9 });
     load(b, kind, n, () => { el.classList.add("swap"); setTimeout(() => { load(a, kind, n); el.classList.remove("swap"); if (b.tagName === "VIDEO") b.pause(); }, 720); });
   }
   const plate = $("#plate");
@@ -316,11 +340,14 @@
   $("#habitList").addEventListener("click", (e) => {
     const btn = e.target.closest("button[data-act]"); if (!btn) return;
     const el = btn.closest(".habit"); const id = el.dataset.id; const r = rec(viewDate);
-    if (btn.dataset.act === "more") { el.classList.toggle("open"); return; }
+    if (btn.dataset.act === "more") { el.classList.toggle("open"); SFX.play("click", { gain: 0.6 }); return; }
     r.done[id] = !r.done[id]; r.updated = Date.now(); persist(); queue(viewDate);
     const h = P.habits.find((x) => x.id === id);
     el.classList.toggle("done", metOn(h, viewDate)); btn.setAttribute("aria-pressed", r.done[id] ? "true" : "false");
     const c = completion(viewDate); $("#hDone").textContent = `${c.done} of ${c.total}`; $("#hBar").style.width = Math.round(c.r * 100) + "%";
+    // the pop rises as the day fills: 0.95 at the first tick to ~1.14 at the last (accumulation family)
+    if (r.done[id]) { SFX.play("tick", { rate: 0.95 + 0.19 * (c.total > 1 ? (c.done - 1) / (c.total - 1) : 1) }); if (c.done === c.total) SFX.play("complete", { delay: 0.18 }); }
+    else SFX.play("untick");
     renderHome();
   });
   $("#habitList").addEventListener("change", (e) => {
@@ -330,12 +357,14 @@
     const r = rec(viewDate); r.times[inp.dataset.time] = inp.value; r.updated = Date.now(); persist(); queue(viewDate);
     const row = inp.closest(".habit"); const t = row.querySelector(".h-time"); if (t) t.textContent = inp.value; else if (inp.value) { const s = document.createElement("span"); s.className = "h-time"; s.textContent = inp.value; row.querySelector(".h-text").appendChild(s); }
   });
-  $("#prevDay").addEventListener("click", () => { viewDate = addDays(viewDate, -1); renderHabits(); });
-  $("#nextDay").addEventListener("click", () => { if (viewDate < today()) { viewDate = addDays(viewDate, 1); renderHabits(); } });
+  $("#prevDay").addEventListener("click", () => { viewDate = addDays(viewDate, -1); renderHabits(); SFX.play("click", { gain: 0.5, rate: 0.95 }); });
+  $("#nextDay").addEventListener("click", () => { if (viewDate < today()) { viewDate = addDays(viewDate, 1); renderHabits(); SFX.play("click", { gain: 0.5, rate: 1.05 }); } });
   $("#btnCheckin").addEventListener("click", () => {
     const r = rec(viewDate); if (r.checkedIn || !canCheckIn(viewDate)) return;
     r.checkedIn = true; r.checkedInAt = Date.now(); r.updated = Date.now(); persist(); queue(viewDate);
-    renderHabits(); renderHome(); showNight(viewDate);
+    renderHabits(); renderHome();
+    const s = streak(); SFX.play(P.milestones && P.milestones[s] ? "milestone" : "checkin");
+    showNight(viewDate);
   });
   $("#btnTonight").addEventListener("click", () => { viewDate = today(); show("habits"); });
   $("#streakBtn").addEventListener("click", () => { show("habits"); openCal(); });
@@ -373,6 +402,8 @@
     try { await ghGet("README.md"); setSync("ok", "Connected"); queue(today()); flush(); } catch { setSync("err", "Token rejected. It needs contents read and write on wolf-data."); }
   });
   $("#btnPull").addEventListener("click", pullHistory); $("#ver").textContent = VERSION;
+  const soundBtn = $("#btnSound"); const paintSound = () => { soundBtn.textContent = store.sound ? "Sounds on" : "Sounds off"; soundBtn.setAttribute("aria-pressed", store.sound ? "true" : "false"); };
+  paintSound(); soundBtn.addEventListener("click", () => { store.sound = !store.sound; persist(); paintSound(); if (store.sound) SFX.play("tick"); });
   try { const sab = getComputedStyle(document.documentElement).getPropertyValue("--sab"); const tb = document.querySelector(".tabs").getBoundingClientRect().bottom; $("#dbg").textContent = `inner ${innerWidth}x${innerHeight} · screen ${screen.width}x${screen.height} · body ${document.body.getBoundingClientRect().height|0} · tabsBottom ${tb|0} · sab ${sab.trim() || "0"} · standalone ${!!navigator.standalone}`; } catch {}
 
   /* ---------- iOS standalone reserves the home-indicator strip itself; do not pad for it twice ---------- */

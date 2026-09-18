@@ -1,0 +1,11 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Wolf sounds</title>
+<style>body{margin:0;background:#141210;color:#EFE9DF;font-family:-apple-system,Helvetica,sans-serif;padding:24px 18px}h1{font-size:20px;margin:0 0 6px}p{color:#B3A793;font-size:13px;margin:0 0 18px}
+.b{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:56px;margin:0 0 8px;padding:0 16px;border-radius:14px;border:1px solid rgba(239,233,223,.18);background:rgba(239,233,223,.05);color:#EFE9DF;font:inherit;font-size:16px;text-align:left}.b small{color:#B3A793;font-size:12px}.b:active{background:#F7CE4A;color:#1A1204}</style></head><body>
+<h1>Wolf sounds</h1><p>Tap each one. Built from your own SFX packs.</p>
+<div id="l"></div>
+<script>
+const S=[["tick","habit ticked (pitch rises through the day)"],["untick","habit unticked"],["complete","last habit of the day"],["checkin","done for tonight"],["milestone","7 / 14 / 21 / 30 nights"],["stageup","wolf grows a stage"],["stagedown","wolf loses a stage"],["click","day arrows, row open"]];
+let ctx,buf={};const ensure=()=>{if(!ctx)ctx=new (window.AudioContext||window.webkitAudioContext)();if(ctx.state==="suspended")ctx.resume();return ctx};
+async function play(n,rate=1){const c=ensure();if(!buf[n]){const r=await fetch(`sfx/${n}.mp3`);buf[n]=await c.decodeAudioData(await r.arrayBuffer())}const s=c.createBufferSource();s.buffer=buf[n];s.playbackRate.value=rate;s.connect(c.destination);s.start()}
+let t=0;S.forEach(([n,d])=>{const b=document.createElement("button");b.className="b";b.innerHTML=`<span>${n}</span><small>${d}</small>`;b.onclick=()=>{if(n==="tick"){play(n,0.95+0.19*((t++%11)/10))}else play(n)};document.getElementById("l").appendChild(b)});
+</script></body></html>

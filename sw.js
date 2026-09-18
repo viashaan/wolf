@@ -9,7 +9,8 @@ const SHELL = [
   "./fonts/fraunces-normal.woff2", "./fonts/archivo-normal.woff2",
   "./img/icon-180.png", "./img/icon-512.png",
   "./img/bg/01.webp", "./img/bg/02.webp", "./img/bg/03.webp", "./img/bg/04.webp",
-  ...STAGES
+  ...STAGES,
+  ...["tick","untick","complete","checkin","milestone","stageup","stagedown","click"].map((n) => `./sfx/${n}.mp3`)
 ];
 
 self.addEventListener("install", (e) => {

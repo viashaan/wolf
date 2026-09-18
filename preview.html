@@ -79,12 +79,12 @@ for (const k in O){
   s.insertAdjacentHTML('beforeend',`<div class="ico"><span class="ic"><svg viewBox="0 0 20 20" fill="currentColor">${S[k]}</svg></span><span>${names[k]}</span></div>`);
 }
 function wire(kind,img,range,n,prev,next,play){
-  const set=v=>{v=Math.min(10,Math.max(1,v));range.value=v;n.textContent=v;if(img.tagName==='VIDEO'){img.poster=`img/${kind}/${String(v).padStart(2,'0')}.webp`;img.src=`img/${kind}/${String(v).padStart(2,'0')}.${EXT}?v=5`;img.play().catch(()=>{});}else{img.src=`img/${kind}/${String(v).padStart(2,'0')}.webp?v=44`;}};
+  const set=v=>{v=Math.min(10,Math.max(1,v));range.value=v;n.textContent=v;if(img.tagName==='VIDEO'){img.poster=`img/${kind}/${String(v).padStart(2,'0')}.webp`;img.src=`img/${kind}/${String(v).padStart(2,'0')}.${EXT}?v=6`;img.play().catch(()=>{});}else{img.src=`img/${kind}/${String(v).padStart(2,'0')}.webp?v=44`;}};
   range.oninput=()=>set(+range.value); prev.onclick=()=>set(+range.value-1); next.onclick=()=>set(+range.value+1);
   let t=null; play.onclick=()=>{ if(t){clearInterval(t);t=null;play.textContent='Play';return;} let v=1,dir=1; set(1); play.textContent='Stop'; t=setInterval(()=>{v+=dir; if(v>=10||v<=1) dir=-dir; set(v);},kind==='wolf'?2500:450); };
   for (let i=1;i<=10;i++){ new Image().src=`img/${kind}/${String(i).padStart(2,'0')}.webp?v=44`; }
 }
 const EXT=/Apple/.test(navigator.vendor)?'mp4':'webm';
-wire('wolf',document.getElementById('wolfImg'),wRange,wN,wPrev,wNext,wPlay); (function(){const v=document.getElementById('wolfImg');v.src=`img/wolf/01.${EXT}?v=5`;const kick=()=>{v.muted=true;v.play().catch(()=>{});};kick();document.addEventListener('visibilitychange',kick);document.addEventListener('pointerdown',kick);})(); wire('brain',brainImg,bRange,bN,bPrev,bNext,bPlay);
+wire('wolf',document.getElementById('wolfImg'),wRange,wN,wPrev,wNext,wPlay); (function(){const v=document.getElementById('wolfImg');v.src=`img/wolf/01.${EXT}?v=6`;const kick=()=>{v.muted=true;v.play().catch(()=>{});};kick();document.addEventListener('visibilitychange',kick);document.addEventListener('pointerdown',kick);})(); wire('brain',brainImg,bRange,bN,bPrev,bNext,bPlay);
 (function grain(){const cv=document.getElementById('grain');const c=cv.getContext('2d');const w=400,h=800;cv.width=w;cv.height=h;const f=[];for(let k=0;k<4;k++){const id=c.createImageData(w,h);const d=id.data;for(let i=0;i<d.length;i+=4){const v=96+(Math.random()*128)|0;d[i]=d[i+1]=d[i+2]=v;d[i+3]=255;}f.push(id);}let i=0;setInterval(()=>{c.putImageData(f[i],0,0);i=(i+1)%4;},125);})();
 </script></body></html>

@@ -3,7 +3,7 @@
   "use strict";
   const P = window.PLAN;
   const $ = (s) => document.querySelector(s);
-  const VERSION = "5.4";
+  const VERSION = "5.5";
   try { const qs = new URLSearchParams(location.search); if (/^\d{4}-\d{2}-\d{2}$/.test(qs.get("start") || "")) P.start = qs.get("start"); } catch {}
 
   /* ---------- dates ---------- */
@@ -23,33 +23,35 @@
     get(k, f) { try { const v = localStorage.getItem(k); return v == null ? f : JSON.parse(v); } catch { return f; } },
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
   };
-  const store = { days: LS.get("wolf2.days", {}), token: LS.get("wolf.token", ""), pending: LS.get("wolf2.pending", []), lastSync: LS.get("wolf2.lastSync", null), sound: LS.get("wolf.sound", true), sfxmap: LS.get("wolf.sfxmap", {}), akey: LS.get("wolf.akey", "") };
-  const persist = () => { LS.set("wolf2.days", store.days); LS.set("wolf.token", store.token); LS.set("wolf2.pending", store.pending); LS.set("wolf2.lastSync", store.lastSync); LS.set("wolf.sound", store.sound); LS.set("wolf.sfxmap", store.sfxmap); LS.set("wolf.akey", store.akey); };
+  const store = { days: LS.get("wolf2.days", {}), token: LS.get("wolf.token", ""), pending: LS.get("wolf2.pending", []), lastSync: LS.get("wolf2.lastSync", null), sound: LS.get("wolf.sound", true), akey: LS.get("wolf.akey", "") };
+  const persist = () => { LS.set("wolf2.days", store.days); LS.set("wolf.token", store.token); LS.set("wolf2.pending", store.pending); LS.set("wolf2.lastSync", store.lastSync); LS.set("wolf.sound", store.sound); LS.set("wolf.akey", store.akey); };
 
   /* ---------- sound ---------- */
   // Eight cues. Played through <audio> elements, not Web Audio: on iOS media elements ignore the
   // ringer switch, Web Audio does not. A small pool per cue lets fast ticks overlap. Families by
   // playbackRate with pitch following (preservesPitch off).
   const SFX = (() => {
-    const names = ["tick", "untick", "complete", "checkin", "milestone", "stageup", "stagedown", "click"];
-    const silent = new Set(["complete", "stageup", "stagedown"]);   // his call: no sound on these
-    const urlFor = (n) => store.sfxmap[n] || `sfx/${n}.mp3`;
+    // Five cues, raw WAV (no decoder priming), decoded once and kept warm. Media elements, not Web Audio,
+    // so they play with the ringer on silent. Anything not listed here is intentionally silent.
+    const names = ["tick", "untick", "checkin", "milestone", "click"];
     const pool = {}; let unlocked = false;
-    function el(n) {
-      const u = urlFor(n); const list = (pool[u] ||= []);
-      let a = list.find((x) => x.paused || x.ended);
-      if (!a) { a = new Audio(u); a.preload = "auto"; a.setAttribute("playsinline", ""); try { a.preservesPitch = false; a.mozPreservesPitch = false; a.webkitPreservesPitch = false; } catch {} if (list.length < 4) list.push(a); }
-      return a;
+    function make(n) {
+      const a = new Audio(`sfx/${n}.wav`); a.preload = "auto"; a.setAttribute("playsinline", "");
+      try { a.preservesPitch = false; a.mozPreservesPitch = false; a.webkitPreservesPitch = false; } catch {}
+      a.addEventListener("ended", () => { a.currentTime = 0; });   // rewind after, never before
+      a.load(); return a;
     }
+    function el(n) { const list = (pool[n] ||= [make(n), make(n), make(n)]); return list.find((x) => x.paused || x.ended) || list[0]; }
     function play(name, o = {}) {
-      if (!store.sound || silent.has(name)) return;
-      const go = () => { const a = el(name); a.currentTime = 0; a.playbackRate = o.rate || 1; a.volume = Math.min(1, o.gain == null ? 1 : o.gain); a.play().catch(() => {}); };
+      if (!store.sound || !pool[name]) return;
+      const go = () => { const a = el(name); if (a.currentTime) a.currentTime = 0; const r = o.rate || 1, v = Math.min(1, o.gain == null ? 1 : o.gain); if (a.playbackRate !== r) a.playbackRate = r; if (a.volume !== v) a.volume = v; a.play().catch(() => {}); };
       if (o.delay) setTimeout(go, o.delay * 1000); else go();
     }
-    function preload() { names.forEach((n) => { if (!silent.has(n)) el(n); }); }
-    // First real tap: touch every pooled element once (play+pause) so later plays need no gesture.
-    const unlock = () => { if (unlocked) return; unlocked = true; names.forEach((n) => { const a = el(n); a.volume = 0; a.play().then(() => { a.pause(); a.currentTime = 0; a.volume = 1; }).catch(() => {}); }); };
-    ["touchend", "click", "keydown"].forEach((ev) => addEventListener(ev, unlock, { once: true, capture: true }));
+    function preload() { names.forEach((n) => el(n)); }
+    // iOS needs one user gesture before media will play: warm every element silently on the first touch.
+    const unlock = () => { if (unlocked) return; unlocked = true; names.forEach((n) => pool[n].forEach((a) => { a.volume = 0; a.play().then(() => { a.pause(); a.currentTime = 0; a.volume = 1; }).catch(() => { a.volume = 1; }); })); };
+    ["touchstart", "pointerdown", "keydown"].forEach((ev) => addEventListener(ev, unlock, { once: true, capture: true, passive: true }));
+    preload();
     return { play, preload };
   })();
   const blank = (date) => ({ date, day: dayIndex(date), done: {}, times: {}, ig: "", checkedIn: false, checkedInAt: 0, updated: 0 });
@@ -551,31 +553,6 @@ Commitments: no alcohol, no cigarettes since 15 Sept. Pouches allowed with an 18
   const soundBtn = $("#btnSound"); const paintSound = () => { soundBtn.textContent = store.sound ? "Sounds on" : "Sounds off"; soundBtn.setAttribute("aria-pressed", store.sound ? "true" : "false"); };
   paintSound(); soundBtn.addEventListener("click", () => { store.sound = !store.sound; persist(); paintSound(); if (store.sound) SFX.play("tick"); });
   // Sound lab: try any candidate inside the real app without changing the shipped defaults.
-  const LAB = {
-    tick: [["warm kalimba", "sfx/warm/tick.mp3"], ["calm A kalimba", "sfx/calm/tick-kalimba-a.mp3"], ["calm B felt piano", "sfx/calm/tick-kalimba-b.mp3"], ["calm C tongue drum", "sfx/calm/tick-tongue-a.mp3"]],
-    untick: [["warm", "sfx/warm/untick.mp3"]],
-    complete: [["bowl", "sfx/calm2/complete-bowl.mp3"], ["gong", "sfx/calm2/complete-gong.mp3"], ["felt note", "sfx/calm2/complete-felt.mp3"], ["water drop", "sfx/calm2/complete-drop.mp3"], ["warm kalimba rise", "sfx/warm/complete.mp3"], ["calm A", "sfx/calm/complete-a.mp3"], ["calm B", "sfx/calm/complete-b.mp3"]],
-    checkin: [["bowl + exhale", "sfx/calm2/checkin-bowl.mp3"], ["gong swell", "sfx/calm2/checkin-gong.mp3"], ["felt chord", "sfx/calm2/checkin-felt.mp3"], ["warm", "sfx/warm/checkin.mp3"], ["calm A", "sfx/calm/checkin-a.mp3"], ["calm B", "sfx/calm/checkin-b.mp3"]],
-    milestone: [["two bowls", "sfx/calm2/milestone-bowl.mp3"], ["gong shimmer", "sfx/calm2/milestone-gong.mp3"], ["warm", "sfx/warm/milestone.mp3"], ["calm A", "sfx/calm/milestone-a.mp3"]],
-    stageup: [["warm swell", "sfx/warm/stageup.mp3"], ["calm A", "sfx/calm/stageup-a.mp3"]],
-    stagedown: [["felt low", "sfx/calm2/stagedown-felt.mp3"], ["warm", "sfx/warm/stagedown.mp3"], ["calm A", "sfx/calm/stagedown-a.mp3"]],
-    click: [["paper", "sfx/calm2/click-paper.mp3"], ["wood", "sfx/calm2/click-wood.mp3"], ["felt", "sfx/calm2/click-felt.mp3"], ["warm felt marble", "sfx/warm/click.mp3"], ["calm A", "sfx/calm/click-a.mp3"]]
-  };
-  const labHost = $("#lab");
-  function paintLab() {
-    labHost.innerHTML = "";
-    Object.keys(LAB).forEach((ev) => {
-      const row = document.createElement("label"); row.className = "field wide";
-      const sel = document.createElement("select"); sel.dataset.ev = ev;
-      sel.innerHTML = `<option value="">current</option>` + LAB[ev].map(([l, u]) => `<option value="${u}"${store.sfxmap[ev] === u ? " selected" : ""}>${l}</option>`).join("");
-      sel.addEventListener("change", () => { if (sel.value) store.sfxmap[ev] = sel.value; else delete store.sfxmap[ev]; persist(); SFX.play(ev); });
-      row.innerHTML = `<span>${ev}</span>`; row.appendChild(sel); labHost.appendChild(row);
-    });
-    const reset = document.createElement("button"); reset.type = "button"; reset.className = "btn ghost"; reset.textContent = "Back to defaults";
-    reset.addEventListener("click", () => { store.sfxmap = {}; persist(); paintLab(); });
-    labHost.appendChild(reset);
-  }
-  $("#btnLab").addEventListener("click", () => { labHost.hidden = !labHost.hidden; if (!labHost.hidden) paintLab(); });
   try { const sab = getComputedStyle(document.documentElement).getPropertyValue("--sab"); const tb = document.querySelector(".tabs").getBoundingClientRect().bottom; $("#dbg").textContent = `inner ${innerWidth}x${innerHeight} · screen ${screen.width}x${screen.height} · body ${document.body.getBoundingClientRect().height|0} · tabsBottom ${tb|0} · sab ${sab.trim() || "0"} · standalone ${!!navigator.standalone}`; } catch {}
 
   /* ---------- iOS standalone reserves the home-indicator strip itself; do not pad for it twice ---------- */

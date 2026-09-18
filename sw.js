@@ -1,7 +1,7 @@
 // Wolf service worker: network-first for the app shell so a pushed update reaches the
 // phone on the next open, with the cache as the offline fallback. Artwork and fonts
 // are immutable per version and come from cache first.
-const VERSION = "wolf-v29";
+const VERSION = "wolf-v30";
 const STAGES = [];
 for (const k of ["wolf", "brain"]) for (let i = 1; i <= 10; i++) { const n = String(i).padStart(2, "0"); STAGES.push(`./img/${k}/${n}.webp`); }
 const SHELL = [
@@ -10,7 +10,7 @@ const SHELL = [
   "./img/icon-180.png", "./img/icon-512.png",
   "./img/bg/01.webp", "./img/bg/02.webp", "./img/bg/03.webp", "./img/bg/04.webp",
   ...STAGES,
-  ...["tick","untick","complete","checkin","milestone","stageup","stagedown","click"].map((n) => `./sfx/${n}.mp3`), "./sfx/silence.mp3"
+  ...["tick","untick","checkin","milestone","click"].map((n) => `./sfx/${n}.wav`)
 ];
 
 self.addEventListener("install", (e) => {
@@ -36,7 +36,7 @@ self.addEventListener("fetch", (e) => {
   if (/\.(mp4|webm)$/.test(url.pathname)) return;           // video streams straight from the network (range requests)
   if (e.request.method !== "GET") return;
   if (url.origin !== self.location.origin) return;
-  const immutable = /\/(fonts|img)\//.test(url.pathname);
+  const immutable = /\/(fonts|img|sfx)\//.test(url.pathname);
   const put = (res) => { if (res && res.ok) { const copy = res.clone(); caches.open(VERSION).then((c) => c.put(e.request, copy)); } return res; };
   if (immutable) {
     e.respondWith(caches.match(e.request).then((hit) => hit || fetch(e.request).then(put)));

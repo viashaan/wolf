@@ -1,6 +1,6 @@
 // Wolf: the whole plan lives here. A private config.json in the data repo can be merged over it.
 window.PLAN = {
-  start: "2026-09-19",              // Day 1 (Austin)
+  start: "2026-09-18",              // Day 1 (Austin)
   data: { owner: "viashaan", repo: "wolf-data" },
 
   // Daily habits. `core` names the ones the nightly message cares about most.

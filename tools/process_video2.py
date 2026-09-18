@@ -37,6 +37,12 @@ def pool(cy):
     a = 1 - np.clip((r - 0.28) / 0.72, 0, 1); a = a * a * (3 - 2 * a)
     return col, a[..., None]
 
+def premultiply(path):
+    """Safari composites HEVC alpha as premultiplied, so bake alpha into the colour before encoding."""
+    a = np.asarray(Image.open(path).convert("RGBA"), np.float32) / 255
+    a[..., :3] *= a[..., 3:4]
+    Image.fromarray((a * 255).astype(np.uint8), "RGBA").save(path)
+
 def run(n, src):
     z = ZOOM[n]; side = int(1220 * z * S / 1520)
     ox = (S - side) // 2; oy = max(0, min(S - side, (S - side) // 2 + int((1 - z) * 60 * S / 1520)))
@@ -68,17 +74,28 @@ def run(n, src):
         col = 1 - (1 - col) * (1 - bl * 0.35)
         out = np.concatenate([np.clip(col, 0, 1), np.clip(acc, 0, 1)], axis=-1)
         Image.fromarray((out * 255).astype(np.uint8), "RGBA").resize((OUT, OUT), Image.LANCZOS).save(f"{tmp}/out_{i:04d}.png")
+        premultiply(f"{tmp}/out_{i:04d}.png")
     # cross-blend the tail into the head so the loop closes even if the model drifted
     N = len(frames); X = min(10, N // 4)
     for j in range(X):
         t = (j + 1) / (X + 1)
         a = np.asarray(Image.open(f"{tmp}/out_{N - X + j:04d}.png"), np.float32); b = np.asarray(Image.open(f"{tmp}/out_{j:04d}.png"), np.float32)
         Image.fromarray((a * (1 - t) + b * t).astype(np.uint8), "RGBA").save(f"{tmp}/out_{N - X + j:04d}.png")
+    encode(n, tmp)
+
+def encode(n, tmp):
     dst = f"{ROOT}/wolf/{n:02d}.mp4"
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-framerate", str(FPS), "-i", f"{tmp}/out_%04d.png",
                     "-c:v", "hevc_videotoolbox", "-pix_fmt", "bgra", "-alpha_quality", "0.85", "-q:v", "62", "-tag:v", "hvc1",
                     "-movflags", "+faststart", "-an", dst], check=True)
-    print(dst, os.path.getsize(dst) // 1024, "KB", N, "frames")
+    print(dst, os.path.getsize(dst) // 1024, "KB")
 
 if __name__ == "__main__":
-    run(int(sys.argv[1]), sys.argv[2])
+    if sys.argv[1] == "reencode":     # premultiply existing out_ frames and re-encode
+        for n in map(int, sys.argv[2:]):
+            tmp = f"{ROOT}/raw/wolfvid2/{n:02d}"
+            for f in sorted(os.listdir(tmp)):
+                if f.startswith("out_"): premultiply(f"{tmp}/{f}")
+            encode(n, tmp)
+    else:
+        run(int(sys.argv[1]), sys.argv[2])

@@ -42,7 +42,7 @@ window.PLAN = {
   freezeEveryDays: 7,
   milestones: { 7: "One week. This is where most people fall off. You did not.", 14: "Two weeks. The clock is yours now.", 21: "Three weeks. It is a habit.", 30: "Thirty. The reset is done. Keep the wolf." },
 
-  wolf:  { window: 7, prior: 0.5 },      // 7-day mean of daily completion; unseen days before day 1 count as 0.5
+  wolf:  { window: 7, prior: 0 },        // 7-day mean of daily completion; he starts at the bottom and trains him up
   brain: { window: 7, minutesForDead: 150 },
 
   // Wolf stage names, 1..10

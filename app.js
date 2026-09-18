@@ -3,7 +3,7 @@
   "use strict";
   const P = window.PLAN;
   const $ = (s) => document.querySelector(s);
-  const VERSION = "2.1";
+  const VERSION = "2.2";
   try { const qs = new URLSearchParams(location.search); if (/^\d{4}-\d{2}-\d{2}$/.test(qs.get("start") || "")) P.start = qs.get("start"); } catch {}
 
   /* ---------- dates ---------- */
@@ -349,10 +349,10 @@
     document.querySelectorAll(".tab").forEach((t) => { const on = t.dataset.view === v; t.classList.toggle("is-active", on); if (on) t.setAttribute("aria-current", "page"); else t.removeAttribute("aria-current"); });
     if (v === "home") { setPlate(1, false); renderHome(); }
     if (v === "habits") { setPlate(4, true); renderHabits(); }
-    if (v === "brain") { setPlate(1, false); renderBrain(); }
+    if (v === "brain") { setPlate(2, false); renderBrain(); }
     if (v === "focus") { setPlate(4, true); renderFocus(); }
     if (v === "info") { setPlate(4, true); renderInfo(); }
-    scrollTo({ top: 0 }); try { history.replaceState(null, "", "#" + v); } catch {}
+    $("#main").scrollTo(0, 0); try { history.replaceState(null, "", "#" + v); } catch {}
   }
   document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => show(t.dataset.view)));
   function renderAll() { renderHome(); renderHabits(); renderBrain(); renderFocus(); renderInfo(); }

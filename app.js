@@ -3,7 +3,7 @@
   "use strict";
   const P = window.PLAN;
   const $ = (s) => document.querySelector(s);
-  const VERSION = "2.8";
+  const VERSION = "2.9";
   try { const qs = new URLSearchParams(location.search); if (/^\d{4}-\d{2}-\d{2}$/.test(qs.get("start") || "")) P.start = qs.get("start"); } catch {}
 
   /* ---------- dates ---------- */
@@ -116,14 +116,19 @@
 
   /* ---------- art crossfade ---------- */
   const shownStage = { wolf: 0, brain: 0 };
+  const VIDEO = { wolf: true, brain: false };   // stages that ship as looping clips
+  function srcFor(kind, n) { return VIDEO[kind] ? `img/${kind}/${pad(n)}.mp4` : `img/${kind}/${pad(n)}.webp`; }
+  function load(el, kind, n, cb) {
+    const src = srcFor(kind, n);
+    if (el.tagName === "VIDEO") { el.poster = `img/${kind}/${pad(n)}.webp`; el.oncanplay = () => { el.play().catch(() => {}); cb && cb(); }; el.src = src; el.load(); }
+    else { el.onload = cb; el.src = src; }
+  }
   function setStage(kind, el, n) {
-    const src = `img/${kind}/${pad(n)}.webp`;
-    const a = el.querySelector("img.a"), b = el.querySelector("img.b");
+    const a = el.querySelector(".a"), b = el.querySelector(".b");
     if (shownStage[kind] === n) return;
-    if (!shownStage[kind]) { a.src = src; shownStage[kind] = n; return; }
+    if (!shownStage[kind]) { load(a, kind, n); shownStage[kind] = n; return; }
     shownStage[kind] = n;
-    b.onload = () => { el.classList.add("swap"); setTimeout(() => { a.src = src; el.classList.remove("swap"); }, 720); };
-    b.src = src;
+    load(b, kind, n, () => { el.classList.add("swap"); setTimeout(() => { load(a, kind, n); el.classList.remove("swap"); if (b.tagName === "VIDEO") b.pause(); }, 720); });
   }
   const plate = $("#plate");
   function setPlate(n, dim) { plate.style.backgroundImage = `url(img/bg/${pad(n)}.webp)`; plate.classList.toggle("dim", !!dim); }

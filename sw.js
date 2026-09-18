@@ -1,7 +1,7 @@
 // Wolf service worker: network-first for the app shell so a pushed update reaches the
 // phone on the next open, with the cache as the offline fallback. Artwork and fonts
 // are immutable per version and come from cache first.
-const VERSION = "wolf-v14";
+const VERSION = "wolf-v16";
 const STAGES = [];
 for (const k of ["wolf", "brain"]) for (let i = 1; i <= 10; i++) { const n = String(i).padStart(2, "0"); STAGES.push(`./img/${k}/${n}.webp`); }
 const SHELL = [
@@ -32,6 +32,7 @@ self.addEventListener("fetch", (e) => {
   // Never cache the GitHub API; those are live reads and writes.
   if (url.hostname === "api.github.com") return;
   if (url.pathname.endsWith("version.json")) return;   // always live
+  if (url.pathname.endsWith(".mp4")) return;           // video streams straight from the network (range requests)
   if (e.request.method !== "GET") return;
   if (url.origin !== self.location.origin) return;
   const immutable = /\/(fonts|img)\//.test(url.pathname);

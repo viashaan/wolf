@@ -72,15 +72,15 @@ main{position:relative;z-index:1;padding:0 18px calc(var(--tabs-h) + var(--sab-e
 
 .hero{width:min(100%,400px);aspect-ratio:1;position:relative;margin:-14px 0 -34px}
 .stage-art{position:absolute;inset:0}
-.stage-art img{
+.stage-art img,.stage-art video{
   position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;
   -webkit-mask-image:radial-gradient(ellipse 50% 50% at 50% 50%,#000 44%,rgba(0,0,0,.5) 62%,transparent 84%);
   mask-image:radial-gradient(ellipse 50% 50% at 50% 50%,#000 44%,rgba(0,0,0,.5) 62%,transparent 84%);
   filter:drop-shadow(0 0 30px rgba(247,206,74,.16));
 }
-.stage-art img.a{opacity:1}
-.stage-art img.b{opacity:0;transition:opacity .7s var(--ease)}
-.stage-art.swap img.b{opacity:1}
+.stage-art .a{opacity:1}
+.stage-art .b{opacity:0;transition:opacity .7s var(--ease)}
+.stage-art.swap .b{opacity:1}
 
 .score{display:flex;flex-direction:column;align-items:center;gap:8px;width:min(100%,340px)}
 .pct{font-family:var(--serif);font-weight:700;font-size:64px;line-height:1;letter-spacing:-.03em;font-variation-settings:"SOFT" 30,"WONK" 1;font-variant-numeric:tabular-nums}
@@ -272,9 +272,9 @@ input[type="number"]::-webkit-inner-spin-button{-webkit-appearance:none}
 .block li::before{content:"";position:absolute;left:0;top:.68em;width:6px;height:1px;background:var(--line-2)}
 
 /* ---------- life ---------- */
-#wolfArt{animation:breathe 4.2s ease-in-out infinite;transform-origin:50% 62%}
+#wolfArt{transform-origin:50% 62%}
 #brainArt{animation:float 5.6s ease-in-out infinite;transform-origin:50% 50%}
-#brainArt img{animation:pulse-glow 5.6s ease-in-out infinite}
+#brainArt img,#brainArt video{animation:pulse-glow 5.6s ease-in-out infinite}
 @keyframes breathe{0%,100%{transform:scale(1) translateY(0)}45%{transform:scale(1.022) translateY(-2px)}60%{transform:scale(1.018) translateY(-1px)}}
 @keyframes float{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-5px) scale(1.012)}}
 @keyframes pulse-glow{0%,100%{filter:drop-shadow(0 0 30px rgba(247,206,74,.16)) brightness(1)}50%{filter:drop-shadow(0 0 40px rgba(247,206,74,.30)) brightness(1.04)}}

@@ -17,7 +17,7 @@ window.PLAN = {
       why: "You wake up hungry. Use it. Proper food, not a snack." },
     { id: "vits",     label: "Vitamins",              icon: "pill",
       why: "With breakfast." },
-    { id: "coffee11", label: "No coffee before 11",   icon: "cup",
+    { id: "coffee11", label: "No coffee before 10",   icon: "cup",
       why: "Cortisol has cycled by then, so it actually helps." },
     { id: "caff",     label: "Caffeine cutoff 14:00", icon: "cupoff",   core: true,
       why: "Anything after two degrades sleep even if you fall asleep fine." },

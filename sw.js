@@ -1,7 +1,7 @@
 // Wolf service worker: network-first for the app shell so a pushed update reaches the
 // phone on the next open, with the cache as the offline fallback. Artwork and fonts
 // are immutable per version and come from cache first.
-const VERSION = "wolf-v27";
+const VERSION = "wolf-v28";
 const STAGES = [];
 for (const k of ["wolf", "brain"]) for (let i = 1; i <= 10; i++) { const n = String(i).padStart(2, "0"); STAGES.push(`./img/${k}/${n}.webp`); }
 const SHELL = [

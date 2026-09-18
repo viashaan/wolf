@@ -76,6 +76,10 @@ main{position:relative;z-index:1;padding:0 18px calc(var(--tabs-h) + var(--sab-e
   position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;
   filter:drop-shadow(0 0 30px rgba(247,206,74,.16));
 }
+#brainArt img,#brainArt video{
+  -webkit-mask-image:radial-gradient(ellipse 50% 50% at 50% 50%,#000 72%,transparent 100%);
+  mask-image:radial-gradient(ellipse 50% 50% at 50% 50%,#000 72%,transparent 100%);
+}
 .stage-art .a{opacity:1}
 .stage-art .b{opacity:0;transition:opacity .7s var(--ease)}
 .stage-art.swap .b{opacity:1}

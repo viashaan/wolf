@@ -3,7 +3,7 @@
   "use strict";
   const P = window.PLAN;
   const $ = (s) => document.querySelector(s);
-  const VERSION = "3.4";
+  const VERSION = "4.0";
   try { const qs = new URLSearchParams(location.search); if (/^\d{4}-\d{2}-\d{2}$/.test(qs.get("start") || "")) P.start = qs.get("start"); } catch {}
 
   /* ---------- dates ---------- */
@@ -23,8 +23,8 @@
     get(k, f) { try { const v = localStorage.getItem(k); return v == null ? f : JSON.parse(v); } catch { return f; } },
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
   };
-  const store = { days: LS.get("wolf2.days", {}), token: LS.get("wolf.token", ""), pending: LS.get("wolf2.pending", []), lastSync: LS.get("wolf2.lastSync", null), sound: LS.get("wolf.sound", true), sfxmap: LS.get("wolf.sfxmap", {}) };
-  const persist = () => { LS.set("wolf2.days", store.days); LS.set("wolf.token", store.token); LS.set("wolf2.pending", store.pending); LS.set("wolf2.lastSync", store.lastSync); LS.set("wolf.sound", store.sound); LS.set("wolf.sfxmap", store.sfxmap); };
+  const store = { days: LS.get("wolf2.days", {}), token: LS.get("wolf.token", ""), pending: LS.get("wolf2.pending", []), lastSync: LS.get("wolf2.lastSync", null), sound: LS.get("wolf.sound", true), sfxmap: LS.get("wolf.sfxmap", {}), akey: LS.get("wolf.akey", "") };
+  const persist = () => { LS.set("wolf2.days", store.days); LS.set("wolf.token", store.token); LS.set("wolf2.pending", store.pending); LS.set("wolf2.lastSync", store.lastSync); LS.set("wolf.sound", store.sound); LS.set("wolf.sfxmap", store.sfxmap); LS.set("wolf.akey", store.akey); };
 
   /* ---------- sound ---------- */
   // Eight cues. Played through <audio> elements, not Web Audio: on iOS media elements ignore the
@@ -252,8 +252,148 @@
     host.innerHTML = "";
     items.forEach((b) => { const el = document.createElement("div"); el.className = "block" + (current && current(b) ? " now" : ""); el.innerHTML = `<h2>${b.title}</h2><ul>${b.lines.map((l) => `<li>${l}</li>`).join("")}</ul>`; host.appendChild(el); });
   }
-  function renderFocus() { const n = Math.max(1, dayIndex(today())); renderBlocks($("#focusBlocks"), P.focus, (b) => n >= b.from && n <= b.to); }
-  function renderInfo() { renderBlocks($("#infoBlocks"), P.info, null); }
+
+  /* ---------- ask: Claude on the phone, answering from the plan + his own days ---------- */
+  const ASK = (() => {
+    const A = P.ask || {}; const host = $("#thread"); const input = $("#askInput"); const form = $("#composer");
+    let know = LS.get("wolf.know", null);   // {sha, text, at} pulled from the private data repo
+    let busy = false;
+    const dayKey = () => "wolf.ask." + today();
+    const hist = () => LS.get(dayKey(), []);
+    const saveHist = (h) => LS.set(dayKey(), h.slice(-40));
+    const hhmm = (d) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+
+    async function warm() {
+      if (!store.token || !navigator.onLine) return;
+      if (know && Date.now() - (know.at || 0) < 3600e3) return;
+      try { const f = await ghGet(A.knowledgePath || "knowledge.md"); if (!f) return;
+        know = (know && know.sha === f.sha) ? { ...know, at: Date.now() } : { sha: f.sha, text: unb64(f.content), at: Date.now() };
+        LS.set("wolf.know", know); } catch {}
+    }
+    const fallbackKnowledge = () => "# Habits\n" + P.habits.map((h) => `- ${h.label}: ${h.why || ""}`).join("\n") + "\n\n# Focus\n" + P.focus.map((f) => `${f.title}\n` + f.lines.map((l) => "- " + l).join("\n")).join("\n\n");
+
+    const RULES = `You are the Ask tab inside Wolf, Shaan's phone app for his 30-day Austin reset. You answer from the knowledge below and from the live state. You are his coach for the month, not a general assistant.
+
+How to answer:
+- One or two short sentences by default. He has said "too much to read". Expand only when he asks for more or asks for a plan or a session.
+- Lead with the answer. Yes or no first when the question is yes or no. Then the one reason that matters.
+- Plain spoken English. Direct, a bit dry, like a mate who knows the plan. Swearing is fine when it lands. No hype, no cheerleading, no lectures.
+- Never use markdown: no headers, no bullet lists, no bold, no emojis. Plain lines. A short list only if he asks for a session or a plan, one item per line.
+- Never use an em dash. Use a comma, a full stop, or a new sentence.
+- 24-hour times, like 14:00.
+- Use the live state. The right answer depends on the day number, the time now, and what he has ticked. Say the specific time, not the general rule.
+- If he asks how he is doing, use the data, be honest, and name the one thing to fix. Celebrate real follow-through in one line. Never shame a miss.
+- Never suggest an earlier alarm without first checking that bedtime is landing near 23:30.
+- No naps is a rule in days 1 to 4. After that, still avoid them.
+- He IS hungry in the mornings. Never tell him to force breakfast down or that wolves have no morning appetite.
+- You are not a doctor. For anything medical, say what to measure or ask his doctor. Never diagnose.
+- Do not invent facts about him or the plan. If the knowledge does not cover it, say so in one line and give the best general answer.
+- Frame changes as experiments, not commitments. One change at a time.`;
+
+    function stateText() {
+      const now = new Date(); const t = today(); const n = dayIndex(t);
+      const phase = P.focus.find((b) => n >= b.from && n <= b.to);
+      const r = peek(t) || blank(t); const list = due(t);
+      const rows = list.map((h) => { const m = metOn(h, t); const tm = h.time && r.times[h.id] ? ` at ${r.times[h.id]}` : ""; const mins = h.minutes ? (r.ig !== "" && r.ig != null ? ` (${r.ig} min logged)` : " (no minutes logged)") : ""; return `- ${h.label}: ${m ? "done" : "not yet"}${tm}${mins}`; }).join("\n");
+      const y = addDays(t, -1); const ry = peek(y); const cy = completion(y);
+      const yl = dayIndex(y) >= 1 ? `Yesterday (day ${dayIndex(y)}): ${cy.done} of ${cy.total} done${ry && ry.times.bed ? `, bed ${ry.times.bed}` : ""}${ry && ry.times.wake ? `, up ${ry.times.wake}` : ""}${ry && ry.checkedIn ? ", checked in" : ", no check-in"}.` : "Yesterday: before day 1.";
+      let sum = 0, k = 0; for (let i = 1; i <= 7; i++) { const d = addDays(t, -i); if (dayIndex(d) < 1) break; sum += completion(d).r; k++; }
+      const misses = P.habits.map((h) => ({ h, s: habitScore(h.id) })).filter((x) => x.s != null).sort((a, b) => a.s - b.s).slice(0, 3).map((x) => `${x.h.label} ${Math.round(x.s * 100)}%`).join(", ");
+      const bm = brainMinutes().minutes;
+      const c = completion(t);
+      return `# Live state
+Now: ${now.toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" })}, ${hhmm(now)} local (Austin).
+Plan day: ${n >= 1 ? n : `not started (day 1 is ${fmtDate(P.start)})`}. Phase: ${phase ? phase.title : "none"}.
+Today so far: ${c.done} of ${c.total} habits done.
+${rows}
+${yl}
+Last ${k} logged days: ${k ? Math.round((sum / k) * 100) + "% average completion" : "nothing logged yet"}. Check-in streak: ${streak()} nights. Wolf: ${P.stages[stageOf(wolfScore()) - 1]} (${Math.round(wolfScore() * 100)}%).
+Weakest habits so far: ${misses || "no data yet"}.
+Brainrot 7-day average: ${bm == null ? "no minutes logged" : Math.round(bm) + " min a day"}.
+Commitments: no alcohol, no cigarettes since 15 Sept. Pouches allowed with an 18:00 cutoff until the week 4 decision.`;
+    }
+
+    function paintThread() {
+      host.innerHTML = "";
+      hist().forEach((m) => { const el = document.createElement("div"); el.className = "msg " + (m.role === "user" ? "u" : "a"); el.textContent = m.shown || m.text; host.appendChild(el); });
+    }
+    function paintFocus() {
+      const n = Math.max(1, dayIndex(today())); const b = P.focus.find((x) => n >= x.from && n <= x.to); const card = $("#focusCard");
+      if (!b) { card.hidden = true; return; } card.hidden = false;
+      const closed = LS.get("wolf.focusClosed", false);
+      card.className = "focus" + (closed ? " closed" : "");
+      card.innerHTML = `<h2>${b.title}</h2><ul>${b.lines.map((l) => `<li>${l}</li>`).join("")}</ul><button type="button" class="more">${closed ? "Show" : "Hide"}</button>`;
+      card.querySelector(".more").onclick = () => { LS.set("wolf.focusClosed", !closed); paintFocus(); SFX.play("click", { gain: 0.5 }); };
+    }
+    function paintChips() {
+      const c = $("#chips"); c.innerHTML = "";
+      (A.chips || []).forEach(([label, q]) => { const b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.textContent = label; b.addEventListener("click", () => send(label, q)); c.appendChild(b); });
+    }
+    function render() {
+      paintFocus(); paintChips(); paintThread();
+      const has = !!store.akey; $("#askEmpty").hidden = has; form.hidden = !has;
+      $("#askStatus").textContent = has ? "Key saved" : "No key";
+    }
+
+    async function stream(messages, onText) {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-api-key": store.akey, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
+        body: JSON.stringify({
+          model: A.model || "claude-opus-5", max_tokens: 1024, stream: true,
+          output_config: { effort: "low" },
+          system: [
+            { type: "text", text: RULES + "\n\n" + (know ? know.text : fallbackKnowledge()), cache_control: { type: "ephemeral" } },
+            { type: "text", text: stateText() }
+          ],
+          messages
+        })
+      });
+      if (!res.ok) { let m = `HTTP ${res.status}`; try { const j = await res.json(); m = (j.error && j.error.message) || m; } catch {} throw new Error(m); }
+      const rd = res.body.getReader(); const dec = new TextDecoder(); let buf = "", out = "";
+      for (;;) {
+        const { value, done } = await rd.read(); if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const parts = buf.split("\n\n"); buf = parts.pop();
+        for (const ev of parts) for (const line of ev.split("\n")) {
+          if (!line.startsWith("data:")) continue;
+          let j; try { j = JSON.parse(line.slice(5).trim()); } catch { continue; }
+          if (j.type === "content_block_delta" && j.delta && j.delta.type === "text_delta") { out += j.delta.text; onText(out); }
+          else if (j.type === "error") throw new Error((j.error && j.error.message) || "stream error");
+        }
+      }
+      return out.trim();
+    }
+
+    async function send(shown, text) {
+      if (busy || !store.akey) return; const q = (text || shown || "").trim(); if (!q) return;
+      busy = true; form.classList.add("busy"); $("#askSend").disabled = true; SFX.play("click", { gain: 0.6 });
+      const h = hist(); h.push({ role: "user", text: q, shown: shown || q, t: Date.now() }); saveHist(h); paintThread();
+      const el = document.createElement("div"); el.className = "msg a wait"; host.appendChild(el); el.scrollIntoView({ block: "end" });
+      try {
+        await warm();
+        const msgs = h.slice(-12).map((m) => ({ role: m.role, content: m.text }));
+        const a = await stream(msgs, (t) => { el.classList.remove("wait"); el.textContent = t; });
+        el.textContent = a || "Nothing came back. Ask again.";
+        const h2 = hist(); h2.push({ role: "assistant", text: a, t: Date.now() }); saveHist(h2);
+        logAsks(h2);
+      } catch (e) {
+        el.classList.remove("wait"); el.classList.add("err");
+        el.textContent = /401|invalid x-api-key|authentication/i.test(e.message) ? "Key rejected. Check it in Settings." : navigator.onLine ? `Did not get through. ${e.message}` : "No signal. Try again when you are online.";
+        const h2 = hist(); if (h2.length && h2[h2.length - 1].role === "user") { h2.pop(); saveHist(h2); }
+      } finally { busy = false; form.classList.remove("busy"); $("#askSend").disabled = false; el.scrollIntoView({ block: "end" }); }
+    }
+    // The day's questions go to the private repo too, so the knowledge can be tightened from what he actually asks.
+    async function logAsks(h) {
+      if (!store.token || !navigator.onLine) return;
+      const t = today();
+      try { await ghPut(`asks/${t}.json`, { date: t, day: dayIndex(t), asks: h.map((m) => ({ role: m.role, text: m.text, t: m.t })) }, `wolf ask: ${t}`); } catch {}
+    }
+    form.addEventListener("submit", (e) => { e.preventDefault(); const q = input.value.trim(); if (!q) return; input.value = ""; send(q, q); });
+    $("#askEmpty").addEventListener("click", () => openSheet());
+    return { render, warm, clearToday: () => { LS.set(dayKey(), []); paintThread(); } };
+  })();
+  function renderAsk() { ASK.render(); }
 
   /* ---------- render: calendar ---------- */
   function renderMonth(host, titleEl, y, m) {
@@ -378,7 +518,7 @@
   const openCal = () => { renderCal(); calSheet.hidden = false; calScrim.hidden = false; };
   const closeCal = () => { calSheet.hidden = true; calScrim.hidden = true; };
   $("#btnCal").addEventListener("click", openCal); $("#btnCalClose").addEventListener("click", closeCal); calScrim.addEventListener("click", closeCal);
-  const views = ["home", "habits", "brain", "focus", "info"];
+  const views = ["home", "habits", "brain", "ask"];
   function show(v) {
     if (!views.includes(v)) v = "home";
     views.forEach((k) => { $(`#view-${k}`).hidden = k !== v; });
@@ -387,16 +527,15 @@
     if (v === "home") { setPlate(1, false); renderHome(); }
     if (v === "habits") { setPlate(4, true); renderHabits(); }
     if (v === "brain") { setPlate(2, false); renderBrain(); }
-    if (v === "focus") { setPlate(4, true); renderFocus(); }
-    if (v === "info") { setPlate(4, true); renderInfo(); }
+    if (v === "ask") { setPlate(4, true); renderAsk(); ASK.warm(); }
     scrollTo({ top: 0 }); try { history.replaceState(null, "", "#" + v); } catch {}
   }
   document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => show(t.dataset.view)));
-  function renderAll() { renderHome(); renderHabits(); renderBrain(); renderFocus(); renderInfo(); }
+  function renderAll() { renderHome(); renderHabits(); renderBrain(); renderAsk(); }
 
   /* ---------- settings ---------- */
   const sheet = $("#sheet"), scrim = $("#sheetScrim");
-  const openSheet = () => { sheet.hidden = false; scrim.hidden = false; $("#fToken").value = store.token; flush(); };
+  const openSheet = () => { sheet.hidden = false; scrim.hidden = false; $("#fToken").value = store.token; $("#fKey").value = store.akey; flush(); };
   const closeSheet = () => { sheet.hidden = true; scrim.hidden = true; };
   $("#btnSettings").addEventListener("click", openSheet); $("#btnClose").addEventListener("click", closeSheet); scrim.addEventListener("click", closeSheet);
   $("#btnSaveToken").addEventListener("click", async () => {
@@ -405,6 +544,8 @@
     try { await ghGet("README.md"); setSync("ok", "Connected"); queue(today()); flush(); } catch { setSync("err", "Token rejected. It needs contents read and write on wolf-data."); }
   });
   $("#btnPull").addEventListener("click", pullHistory); $("#ver").textContent = VERSION;
+  $("#btnSaveKey").addEventListener("click", () => { store.akey = $("#fKey").value.trim(); persist(); renderAsk(); if (store.akey) { $("#askStatus").textContent = "Key saved"; ASK.warm(); } });
+  $("#btnClearAsk").addEventListener("click", () => { ASK.clearToday(); SFX.play("untick"); });
   const soundBtn = $("#btnSound"); const paintSound = () => { soundBtn.textContent = store.sound ? "Sounds on" : "Sounds off"; soundBtn.setAttribute("aria-pressed", store.sound ? "true" : "false"); };
   paintSound(); soundBtn.addEventListener("click", () => { store.sound = !store.sound; persist(); paintSound(); if (store.sound) SFX.play("tick"); });
   // Sound lab: try any candidate inside the real app without changing the shipped defaults.

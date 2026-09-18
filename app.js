@@ -27,33 +27,28 @@
   const persist = () => { LS.set("wolf2.days", store.days); LS.set("wolf.token", store.token); LS.set("wolf2.pending", store.pending); LS.set("wolf2.lastSync", store.lastSync); LS.set("wolf.sound", store.sound); LS.set("wolf.sfxmap", store.sfxmap); };
 
   /* ---------- sound ---------- */
-  // Eight short cues built from Shaan's own SFX library (tools/build_sfx.py). Web Audio so they
-  // fire with no latency; the context unlocks on the first tap. Families vary by playbackRate.
+  // Eight cues. Played through <audio> elements, not Web Audio: on iOS media elements ignore the
+  // ringer switch, Web Audio does not. A small pool per cue lets fast ticks overlap. Families by
+  // playbackRate with pitch following (preservesPitch off).
   const SFX = (() => {
     const names = ["tick", "untick", "complete", "checkin", "milestone", "stageup", "stagedown", "click"];
-    let ctx = null; const buf = {}; let loading = false;
-    const ensure = () => { if (!ctx) { try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch { return null; } } if (ctx.state === "suspended") ctx.resume().catch(() => {}); return ctx; };
-    // Sound lab: store.sfxmap[event] can point an event at a candidate file. Default stays sfx/<event>.mp3.
     const urlFor = (n) => store.sfxmap[n] || `sfx/${n}.mp3`;
-    async function fetchBuf(u) { if (buf[u]) return buf[u]; try { const r = await fetch(u); buf[u] = await ctx.decodeAudioData(await r.arrayBuffer()); } catch {} return buf[u]; }
-    async function preload() {
-      if (loading || !ensure()) return; loading = true;
-      await Promise.all(names.map((n) => fetchBuf(urlFor(n))));
+    const pool = {}; let unlocked = false;
+    function el(n) {
+      const u = urlFor(n); const list = (pool[u] ||= []);
+      let a = list.find((x) => x.paused || x.ended);
+      if (!a) { a = new Audio(u); a.preload = "auto"; a.setAttribute("playsinline", ""); try { a.preservesPitch = false; a.mozPreservesPitch = false; a.webkitPreservesPitch = false; } catch {} if (list.length < 4) list.push(a); }
+      return a;
     }
     function play(name, o = {}) {
-      if (!store.sound) return; const c = ensure(); if (!c) return;
-      const u = urlFor(name); if (!buf[u]) { fetchBuf(u); return; }
-      const src = c.createBufferSource(); src.buffer = buf[u]; src.playbackRate.value = o.rate || 1;
-      const g = c.createGain(); g.gain.value = o.gain == null ? 1 : o.gain;
-      src.connect(g); g.connect(c.destination); src.start(c.currentTime + (o.delay || 0));
+      if (!store.sound) return;
+      const go = () => { const a = el(name); a.currentTime = 0; a.playbackRate = o.rate || 1; a.volume = Math.min(1, o.gain == null ? 1 : o.gain); a.play().catch(() => {}); };
+      if (o.delay) setTimeout(go, o.delay * 1000); else go();
     }
-    // iOS: Web Audio obeys the ringer switch, media elements do not. Playing a silent <audio>
-    // inside the first real tap moves the audio session to "playback", after which Web Audio
-    // plays with the phone on silent. Must happen on touchend/click, not touchstart.
-    let unlocked = false; const silent = new Audio("sfx/silence.mp3"); silent.loop = true; silent.setAttribute("playsinline", ""); silent.volume = 0.01;
-    const unlock = () => { if (unlocked) return; unlocked = true; silent.play().catch(() => {}); ensure(); preload(); };
+    function preload() { names.forEach((n) => el(n)); }
+    // First real tap: touch every pooled element once (play+pause) so later plays need no gesture.
+    const unlock = () => { if (unlocked) return; unlocked = true; names.forEach((n) => { const a = el(n); a.volume = 0; a.play().then(() => { a.pause(); a.currentTime = 0; a.volume = 1; }).catch(() => {}); }); };
     ["touchend", "click", "keydown"].forEach((ev) => addEventListener(ev, unlock, { once: true, capture: true }));
-    document.addEventListener("visibilitychange", () => { if (!document.hidden && unlocked) { silent.play().catch(() => {}); ensure(); } });
     return { play, preload };
   })();
   const blank = (date) => ({ date, day: dayIndex(date), done: {}, times: {}, ig: "", checkedIn: false, checkedInAt: 0, updated: 0 });

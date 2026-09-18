@@ -22,7 +22,7 @@ THESIS: One wolf, one number, one streak. The home screen is the animal and how 
 OWN-WORLD: Warm brown plates with amber light smeared sideways, bone type, one golden accent, live film grain. Fraunces for the numbers, Archivo for everything else. Ten photographic stages of the same wolf.
 STORY: He opens it, sees the wolf, ticks the day, checks in at night, gets a line back, keeps the streak.
 FIRST VIEWPORT: 390 by 844. Streak top right in golden. The wolf fills the top half over the dark plate. Under it the percentage in Fraunces, a golden bar, the stage name, one line. Tab bar on the safe area.
-FORM: Home / Habits / Brain / Calendar. The user dictated this structure screen by screen on 2026-09-16, which supersedes the v1 roll (seed 7358d6f0).
+FORM: Wolf / Habits / Brain / Ask (v4: Focus and Info folded into Ask, a chat that answers from the plan and his own days). The user dictated this structure screen by screen on 2026-09-16, which supersedes the v1 roll (seed 7358d6f0).
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
 -->
 <canvas id="grain" aria-hidden="true"></canvas>
@@ -95,11 +95,17 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     </div>
   </section>
 
-  <!-- FOCUS -->
-  <section class="view" id="view-focus" hidden><div class="blocks" id="focusBlocks"></div></section>
-
-  <!-- INFO -->
-  <section class="view" id="view-info" hidden><div class="blocks" id="infoBlocks"></div></section>
+  <!-- ASK -->
+  <section class="view ask" id="view-ask" hidden>
+    <div class="focus" id="focusCard"></div>
+    <div class="chips" id="chips"></div>
+    <div class="thread" id="thread"></div>
+    <button class="btn ghost ask-empty" id="askEmpty" hidden>Add your Anthropic key in Settings</button>
+    <form class="composer" id="composer" autocomplete="off">
+      <input id="askInput" type="text" placeholder="Ask anything" autocomplete="off" autocapitalize="sentences" enterkeyhint="send" aria-label="Ask">
+      <button type="submit" class="send" id="askSend" aria-label="Send"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 16V4M4.5 9.5 10 4l5.5 5.5"/></svg></button>
+    </form>
+  </section>
 
 </main>
 
@@ -113,11 +119,8 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
   <button class="tab" data-view="brain">
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3.5a3 3 0 0 0-3 3 3 3 0 0 0-2.5 4.5A3 3 0 0 0 7 16h6a3 3 0 0 0 2.5-5 3 3 0 0 0-2.5-4.5 3 3 0 0 0-3-3z"/><path d="M10 3.5v12.5M7 8.5c1 .5 2 .5 3 0M10 12c1-.5 2-.5 3 0"/></svg><span>Brain</span>
   </button>
-  <button class="tab" data-view="focus">
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="7"/><circle cx="10" cy="10" r="3"/><path d="M10 3v2M10 15v2M3 10h2M15 10h2"/></svg><span>Focus</span>
-  </button>
-  <button class="tab" data-view="info">
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="M10 9v5M10 6.5v.2"/></svg><span>Info</span>
+  <button class="tab" data-view="ask">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 10a6.5 6.5 0 0 1 6.5-6.5 6.5 6.5 0 0 1 6.5 6.5c0 3.6-2.9 6.2-6.5 6.2-.9 0-1.8-.2-2.6-.5L4 16.5l.9-3A6.4 6.4 0 0 1 3.5 10z"/><path d="M7.3 10h.01M10 10h.01M12.7 10h.01"/></svg><span>Ask</span>
   </button>
 </nav>
 
@@ -157,6 +160,15 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     <button class="btn" id="btnPull">Pull history</button>
   </div>
   <p class="sheet-status" id="syncStatus">Not connected</p>
+  <hr class="rule">
+  <h2 class="sheet-title">Ask</h2>
+  <p class="sheet-copy">Paste an Anthropic API key once. Ask then answers from your plan and your days. It stays on this phone.</p>
+  <label class="field wide"><span>Anthropic key</span><input type="password" id="fKey" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="sk-ant-..."></label>
+  <div class="sheet-row">
+    <button class="btn primary" id="btnSaveKey">Save key</button>
+    <button class="btn" id="btnClearAsk">Clear today's chat</button>
+  </div>
+  <p class="sheet-status" id="askStatus">No key</p>
   <hr class="rule">
   <p class="sheet-copy small">Ticks save on this phone instantly and sync whenever there is signal. Version <span id="ver">2.0</span>.</p>
   <p class="dbg" id="dbg"></p>

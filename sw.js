@@ -33,7 +33,7 @@ self.addEventListener("fetch", (e) => {
   // Never cache the GitHub API; those are live reads and writes.
   if (url.hostname === "api.github.com") return;
   if (url.pathname.endsWith("version.json")) return;   // always live
-  if (url.pathname.endsWith(".mp4")) return;           // video streams straight from the network (range requests)
+  if (/\.(mp4|webm)$/.test(url.pathname)) return;           // video streams straight from the network (range requests)
   if (e.request.method !== "GET") return;
   if (url.origin !== self.location.origin) return;
   const immutable = /\/(fonts|img)\//.test(url.pathname);

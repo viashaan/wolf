@@ -3,7 +3,7 @@
   "use strict";
   const P = window.PLAN;
   const $ = (s) => document.querySelector(s);
-  const VERSION = "5.1";
+  const VERSION = "5.2";
   try { const qs = new URLSearchParams(location.search); if (/^\d{4}-\d{2}-\d{2}$/.test(qs.get("start") || "")) P.start = qs.get("start"); } catch {}
 
   /* ---------- dates ---------- */
@@ -143,9 +143,9 @@
 
   /* ---------- art crossfade ---------- */
   const shownStage = { wolf: 0, brain: 0 };
-  const APPLE = /Apple/.test(navigator.vendor);   // HEVC with alpha only decodes in Safari / iOS
-  const VIDEO = { wolf: APPLE, brain: false };   // stages that ship as looping clips
-  function srcFor(kind, n) { return VIDEO[kind] ? `img/${kind}/${pad(n)}.mp4?v=${VERSION}` : `img/${kind}/${pad(n)}.webp`; }
+  const VEXT = /Apple/.test(navigator.vendor) ? "mp4" : "webm";   // HEVC alpha for Safari / iOS, VP9 alpha elsewhere
+  const VIDEO = { wolf: true, brain: false };   // stages that ship as looping clips
+  function srcFor(kind, n) { return VIDEO[kind] ? `img/${kind}/${pad(n)}.${VEXT}?v=${VERSION}` : `img/${kind}/${pad(n)}.webp`; }
   function load(el, kind, n, cb) {
     const src = srcFor(kind, n);
     if (el.tagName === "VIDEO") { el.poster = `img/${kind}/${pad(n)}.webp`; el.oncanplay = () => { el.play().catch(() => {}); cb && cb(); }; el.src = src; el.load(); }

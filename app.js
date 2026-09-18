@@ -3,7 +3,7 @@
   "use strict";
   const P = window.PLAN;
   const $ = (s) => document.querySelector(s);
-  const VERSION = "2.2";
+  const VERSION = "2.3";
   try { const qs = new URLSearchParams(location.search); if (/^\d{4}-\d{2}-\d{2}$/.test(qs.get("start") || "")) P.start = qs.get("start"); } catch {}
 
   /* ---------- dates ---------- */
@@ -375,4 +375,19 @@
   if (store.token) { setSync("ok", store.lastSync ? `Synced ${new Date(store.lastSync).toLocaleString([], { hour: "2-digit", minute: "2-digit", day: "numeric", month: "short" })}` : "Connected"); flush(); } else setSync("", "Not connected");
   let lastDay = today(); setInterval(() => { if (today() !== lastDay) { lastDay = today(); viewDate = today(); renderAll(); } }, 60000);
   if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+  // Self-updating: if the server's version differs from this build, drop every cache and reload once.
+  async function checkUpdate(force) {
+    try {
+      const r = await fetch("version.json?t=" + Date.now(), { cache: "no-store" }); if (!r.ok) return false;
+      const { v } = await r.json();
+      if (v !== VERSION || force) {
+        const rs = await navigator.serviceWorker.getRegistrations(); for (const x of rs) await x.unregister();
+        const ks = await caches.keys(); for (const k of ks) await caches.delete(k);
+        location.replace(location.pathname + "?u=" + Date.now() + location.hash); return true;
+      }
+    } catch {}
+    return false;
+  }
+  if (!/[?&]u=/.test(location.search)) { checkUpdate(false); document.addEventListener("visibilitychange", () => { if (!document.hidden) checkUpdate(false); }); }
+  $("#btnUpdate").addEventListener("click", async () => { $("#btnUpdate").textContent = "Updating"; const did = await checkUpdate(true); if (!did) $("#btnUpdate").textContent = "Up to date"; });
 })();

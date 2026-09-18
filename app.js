@@ -3,7 +3,7 @@
   "use strict";
   const P = window.PLAN;
   const $ = (s) => document.querySelector(s);
-  const VERSION = "6.6";
+  const VERSION = "6.7";
   try { const qs = new URLSearchParams(location.search); if (/^\d{4}-\d{2}-\d{2}$/.test(qs.get("start") || "")) P.start = qs.get("start"); } catch {}
 
   /* ---------- dates ---------- */
@@ -150,9 +150,15 @@
   function srcFor(kind, n) { return VIDEO[kind] ? `img/${kind}/${pad(n)}.${VEXT}?v=${VERSION}` : `img/${kind}/${pad(n)}.webp`; }
   function load(el, kind, n, cb) {
     const src = srcFor(kind, n);
-    if (el.tagName === "VIDEO") { el.poster = `img/${kind}/${pad(n)}.webp`; el.oncanplay = () => { el.play().catch(() => {}); cb && cb(); }; el.src = src; el.load(); }
+    if (el.tagName === "VIDEO") { el.muted = true; el.defaultMuted = true; el.setAttribute("muted", ""); el.poster = `img/${kind}/${pad(n)}.webp`; el.oncanplay = () => { el.play().catch(() => {}); cb && cb(); }; el.src = src; el.load(); }
     else { el.onload = cb; el.src = src; }
   }
+  // iOS blocks autoplay in Low Power Mode and when Auto-Play Video Previews is off; any tap or return to the app restarts the clip.
+  function kickVideos() { document.querySelectorAll(".stage-art video.a").forEach((v) => { if (v.src && v.paused) { v.muted = true; v.play().catch(() => {}); } }); }
+  ["pointerdown", "touchstart", "click"].forEach((ev) => document.addEventListener(ev, kickVideos, { passive: true }));
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) kickVideos(); });
+  addEventListener("pageshow", kickVideos); addEventListener("focus", kickVideos);
+  setInterval(kickVideos, 4000);
   function setStage(kind, el, n) {
     const a = el.querySelector(".a"), b = el.querySelector(".b");
     if (shownStage[kind] === n) return;

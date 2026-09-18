@@ -3,7 +3,7 @@
   "use strict";
   const P = window.PLAN;
   const $ = (s) => document.querySelector(s);
-  const VERSION = "4.5";
+  const VERSION = "5.0";
   try { const qs = new URLSearchParams(location.search); if (/^\d{4}-\d{2}-\d{2}$/.test(qs.get("start") || "")) P.start = qs.get("start"); } catch {}
 
   /* ---------- dates ---------- */
@@ -32,6 +32,7 @@
   // playbackRate with pitch following (preservesPitch off).
   const SFX = (() => {
     const names = ["tick", "untick", "complete", "checkin", "milestone", "stageup", "stagedown", "click"];
+    const silent = new Set(["complete", "stageup", "stagedown"]);   // his call: no sound on these
     const urlFor = (n) => store.sfxmap[n] || `sfx/${n}.mp3`;
     const pool = {}; let unlocked = false;
     function el(n) {
@@ -41,11 +42,11 @@
       return a;
     }
     function play(name, o = {}) {
-      if (!store.sound) return;
+      if (!store.sound || silent.has(name)) return;
       const go = () => { const a = el(name); a.currentTime = 0; a.playbackRate = o.rate || 1; a.volume = Math.min(1, o.gain == null ? 1 : o.gain); a.play().catch(() => {}); };
       if (o.delay) setTimeout(go, o.delay * 1000); else go();
     }
-    function preload() { names.forEach((n) => el(n)); }
+    function preload() { names.forEach((n) => { if (!silent.has(n)) el(n); }); }
     // First real tap: touch every pooled element once (play+pause) so later plays need no gesture.
     const unlock = () => { if (unlocked) return; unlocked = true; names.forEach((n) => { const a = el(n); a.volume = 0; a.play().then(() => { a.pause(); a.currentTime = 0; a.volume = 1; }).catch(() => {}); }); };
     ["touchend", "click", "keydown"].forEach((ev) => addEventListener(ev, unlock, { once: true, capture: true }));

@@ -1,0 +1,332 @@
+{
+ "tick": [
+  [
+   "tick-simple-switch.mp3",
+   "simple switch",
+   "locked"
+  ]
+ ],
+ "untick": [
+  [
+   "untick-simple-switch.mp3",
+   "simple switch",
+   "locked"
+  ]
+ ],
+ "complete": [],
+ "checkin": [
+  [
+   "checkin-switch-thump.mp3",
+   "switch + thump",
+   "composite"
+  ],
+  [
+   "checkin-double-switch-thump.mp3",
+   "double switch + thump",
+   "composite"
+  ],
+  [
+   "checkin-hit-1.mp3",
+   "hit 1",
+   "library"
+  ],
+  [
+   "checkin-hit-2.mp3",
+   "hit 2",
+   "library"
+  ],
+  [
+   "checkin-hit-3.mp3",
+   "hit 3",
+   "library"
+  ],
+  [
+   "checkin-ping-1.mp3",
+   "ping 1",
+   "library"
+  ],
+  [
+   "checkin-ping-2.mp3",
+   "ping 2",
+   "library"
+  ],
+  [
+   "checkin-clock-1.mp3",
+   "clock 1",
+   "library"
+  ],
+  [
+   "checkin-small-drum-hit.mp3",
+   "small drum hit",
+   "library"
+  ],
+  [
+   "checkin-soft-deep-drum.mp3",
+   "soft deep drum",
+   "library"
+  ],
+  [
+   "checkin-weight-on-floor.mp3",
+   "weight on floor",
+   "library"
+  ],
+  [
+   "checkin-weight-on-stand.mp3",
+   "weight on stand",
+   "library"
+  ],
+  [
+   "checkin-metal-plugin.mp3",
+   "metal plugin",
+   "library"
+  ],
+  [
+   "checkin-crispy-metal.mp3",
+   "crispy metal",
+   "library"
+  ],
+  [
+   "checkin-mech-double-hit.mp3",
+   "mech double hit",
+   "library"
+  ],
+  [
+   "checkin-clock-low-impact.mp3",
+   "clock low impact",
+   "library"
+  ],
+  [
+   "checkin-low-metal-impact.mp3",
+   "low metal impact",
+   "library"
+  ]
+ ],
+ "milestone": [
+  [
+   "milestone-switch-thump.mp3",
+   "switch + thump",
+   "composite"
+  ],
+  [
+   "milestone-double-switch-thump.mp3",
+   "double switch + thump",
+   "composite"
+  ],
+  [
+   "milestone-hit-1.mp3",
+   "hit 1",
+   "library"
+  ],
+  [
+   "milestone-hit-2.mp3",
+   "hit 2",
+   "library"
+  ],
+  [
+   "milestone-hit-3.mp3",
+   "hit 3",
+   "library"
+  ],
+  [
+   "milestone-ping-1.mp3",
+   "ping 1",
+   "library"
+  ],
+  [
+   "milestone-ping-2.mp3",
+   "ping 2",
+   "library"
+  ],
+  [
+   "milestone-clock-1.mp3",
+   "clock 1",
+   "library"
+  ],
+  [
+   "milestone-small-drum-hit.mp3",
+   "small drum hit",
+   "library"
+  ],
+  [
+   "milestone-soft-deep-drum.mp3",
+   "soft deep drum",
+   "library"
+  ],
+  [
+   "milestone-weight-on-floor.mp3",
+   "weight on floor",
+   "library"
+  ],
+  [
+   "milestone-weight-on-stand.mp3",
+   "weight on stand",
+   "library"
+  ],
+  [
+   "milestone-metal-plugin.mp3",
+   "metal plugin",
+   "library"
+  ],
+  [
+   "milestone-crispy-metal.mp3",
+   "crispy metal",
+   "library"
+  ],
+  [
+   "milestone-mech-double-hit.mp3",
+   "mech double hit",
+   "library"
+  ],
+  [
+   "milestone-clock-low-impact.mp3",
+   "clock low impact",
+   "library"
+  ],
+  [
+   "milestone-low-metal-impact.mp3",
+   "low metal impact",
+   "library"
+  ]
+ ],
+ "stageup": [
+  [
+   "stageup-whoosh-switch-thump.mp3",
+   "whoosh + switch + thump",
+   "composite"
+  ],
+  [
+   "stageup-rise-and-hit-gym.mp3",
+   "rise and hit (gym)",
+   "library"
+  ],
+  [
+   "stageup-barbell-rising.mp3",
+   "barbell rising",
+   "library"
+  ],
+  [
+   "stageup-barbell-snap.mp3",
+   "barbell snap",
+   "library"
+  ],
+  [
+   "stageup-short-metal-riser.mp3",
+   "short metal riser",
+   "library"
+  ],
+  [
+   "stageup-assembling-parts.mp3",
+   "assembling parts",
+   "library"
+  ],
+  [
+   "stageup-metal-press-rising.mp3",
+   "metal press rising",
+   "library"
+  ],
+  [
+   "stageup-camera-clicks-rising.mp3",
+   "camera clicks rising",
+   "library"
+  ],
+  [
+   "stageup-giant-clock-click.mp3",
+   "giant clock click",
+   "library"
+  ],
+  [
+   "stageup-riser-1.mp3",
+   "riser 1",
+   "library"
+  ],
+  [
+   "stageup-riser-3.mp3",
+   "riser 3",
+   "library"
+  ],
+  [
+   "stageup-whoosh-1.mp3",
+   "whoosh 1",
+   "library"
+  ],
+  [
+   "stageup-metal-thunder-whoosh.mp3",
+   "metal thunder whoosh",
+   "library"
+  ]
+ ],
+ "stagedown": [
+  [
+   "stagedown-switch-thump-fall.mp3",
+   "switch + thump + fall",
+   "composite"
+  ],
+  [
+   "stagedown-downer-1.mp3",
+   "downer 1",
+   "library"
+  ],
+  [
+   "stagedown-downer-2.mp3",
+   "downer 2",
+   "library"
+  ],
+  [
+   "stagedown-downer-3.mp3",
+   "downer 3",
+   "library"
+  ],
+  [
+   "stagedown-downer-4.mp3",
+   "downer 4",
+   "library"
+  ],
+  [
+   "stagedown-metal-press-slowing.mp3",
+   "metal press slowing",
+   "library"
+  ],
+  [
+   "stagedown-clock-slowing.mp3",
+   "clock slowing",
+   "library"
+  ],
+  [
+   "stagedown-seat-time-slowing.mp3",
+   "seat time slowing",
+   "library"
+  ],
+  [
+   "stagedown-descending-noise.mp3",
+   "descending noise",
+   "library"
+  ],
+  [
+   "stagedown-weight-loss.mp3",
+   "weight loss",
+   "library"
+  ],
+  [
+   "stagedown-exhale-whoosh.mp3",
+   "exhale whoosh",
+   "library"
+  ],
+  [
+   "stagedown-bass-drop.mp3",
+   "bass drop",
+   "library"
+  ],
+  [
+   "stagedown-low-synth-whoosh.mp3",
+   "low synth whoosh",
+   "library"
+  ]
+ ],
+ "click": [
+  [
+   "click-stutter-click.mp3",
+   "stutter click",
+   "locked"
+  ]
+ ]
+}

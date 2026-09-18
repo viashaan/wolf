@@ -9,10 +9,10 @@ window.PLAN = {
   habits: [
     { id: "wake",     label: "Up by 07:45",           icon: "sunrise",  time: true,  core: true, defaultTime: "07:45",
       why: "Two alarms, twenty minutes apart. Wake on the second." },
-    { id: "sun",      label: "Sunlight",              icon: "sun",      core: true,
-      why: "10 to 20 minutes outside within an hour of waking. Holds the whole clock." },
     { id: "water",    label: "Water first",           icon: "drop",
       why: "A big glass before anything else." },
+    { id: "sun",      label: "Sunlight",              icon: "sun",      core: true,
+      why: "10 to 20 minutes outside within an hour of waking. Holds the whole clock." },
     { id: "breakfast",label: "Breakfast",             icon: "egg",
       why: "You wake up hungry. Use it. Proper food, not a snack." },
     { id: "vits",     label: "Vitamins",              icon: "pill",

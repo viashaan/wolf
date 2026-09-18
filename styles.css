@@ -300,7 +300,7 @@ input[type="number"]::-webkit-inner-spin-button{-webkit-appearance:none}
 }
 
 /* ---------- v4: Ask ---------- */
-.tabs{grid-template-columns:repeat(4,1fr)}
+.tabs{grid-template-columns:repeat(5,1fr)}
 .view.ask{gap:12px;padding-bottom:6px}
 .focus{background:rgba(20,18,16,.58);border:1px solid rgba(247,206,74,.45);border-radius:16px;padding:14px 16px 12px;display:flex;flex-direction:column;gap:8px}
 .focus h2{font-family:var(--serif);font-weight:650;font-size:19px;line-height:1.1;font-variation-settings:"SOFT" 30,"WONK" 1;color:var(--golden)}
@@ -334,3 +334,19 @@ input[type="number"]::-webkit-inner-spin-button{-webkit-appearance:none}
 .composer.busy .send{background:rgba(239,233,223,.18)}
 @keyframes blink{50%{opacity:.25}}
 .msg.a.wait::after{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--ash);animation:blink 1s infinite}
+
+/* ---------- learn ---------- */
+.view.learn{gap:12px}
+.feed{display:flex;flex-direction:column;gap:12px;width:100%}
+.lcard{background:rgba(20,18,16,.58);border:1px solid var(--line);border-radius:16px;padding:16px 16px 14px;display:flex;flex-direction:column;gap:9px;text-align:left}
+.lcard .ls{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ash-2);display:flex;justify-content:space-between;align-items:center}
+.lcard h3{font-family:var(--serif);font-weight:650;font-size:19px;line-height:1.15;font-variation-settings:"SOFT" 30,"WONK" 1;color:var(--bone);margin:0}
+.lcard .lb{font-size:14.5px;line-height:1.48;color:var(--bone);opacity:.92}
+.lcard .lw{font-size:13px;line-height:1.4;color:var(--ash);padding-left:10px;border-left:2px solid rgba(247,206,74,.45)}
+.lcard .la{display:flex;gap:8px;margin-top:2px}
+.lcard .la button{min-height:34px;padding:0 12px;border-radius:17px;border:1px solid var(--line-2);background:transparent;color:var(--ash);font-size:11px;letter-spacing:.12em;text-transform:uppercase}
+.lcard .la button.on{color:var(--golden);border-color:rgba(247,206,74,.5)}
+.lcard .la button:active{background:rgba(239,233,223,.08)}
+#learnChips .chip.on{color:var(--golden);border-color:rgba(247,206,74,.5)}
+#feedMore{align-self:center}
+#feedEnd{height:1px}

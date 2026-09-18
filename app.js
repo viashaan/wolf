@@ -3,7 +3,7 @@
   "use strict";
   const P = window.PLAN;
   const $ = (s) => document.querySelector(s);
-  const VERSION = "6.7";
+  const VERSION = "6.8";
   try { const qs = new URLSearchParams(location.search); if (/^\d{4}-\d{2}-\d{2}$/.test(qs.get("start") || "")) P.start = qs.get("start"); } catch {}
 
   /* ---------- dates ---------- */
@@ -528,7 +528,7 @@ Commitments: no alcohol, no cigarettes since 15 Sept. Pouches allowed with an 18
   const openCal = () => { renderCal(); calSheet.hidden = false; calScrim.hidden = false; };
   const closeCal = () => { calSheet.hidden = true; calScrim.hidden = true; };
   $("#btnCal").addEventListener("click", openCal); $("#btnCalClose").addEventListener("click", closeCal); calScrim.addEventListener("click", closeCal);
-  const views = ["home", "habits", "brain", "ask"];
+  const views = ["home", "habits", "brain", "ask", "learn"];
   function show(v) {
     if (!views.includes(v)) v = "home";
     views.forEach((k) => { $(`#view-${k}`).hidden = k !== v; });
@@ -538,10 +538,77 @@ Commitments: no alcohol, no cigarettes since 15 Sept. Pouches allowed with an 18
     if (v === "habits") { setPlate(4, true); renderHabits(); }
     if (v === "brain") { setPlate(2, false); renderBrain(); }
     if (v === "ask") { setPlate(4, true); renderAsk(); ASK.warm(); }
+    if (v === "learn") { setPlate(4, true); LEARN.open(); }
     scrollTo({ top: 0 }); try { history.replaceState(null, "", "#" + v); } catch {}
   }
   document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => show(t.dataset.view)));
   function renderAll() { renderHome(); renderHabits(); renderBrain(); renderAsk(); }
+
+
+  /* ---------- learn: a bank of cards from the private repo, instead of scrolling ---------- */
+  const LEARN = (() => {
+    const PAGE = 10;
+    let bank = LS.get("wolf.learn", null);            // { sha, cards, subjects, at }
+    const seen = LS.get("wolf.learn.seen", {});       // id -> date first seen
+    const saved = LS.get("wolf.learn.saved", []);     // ids
+    let filter = "all", order = [], shown = 0, io = null;
+    const feed = $("#feed"), more = $("#feedMore"), empty = $("#learnEmpty"), chips = $("#learnChips");
+    const seed = () => { let h = 0; for (const c of today()) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; };
+    const rnd = (s) => () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+    async function refresh() {
+      if (!store.token || !navigator.onLine) return;
+      if (bank && Date.now() - (bank.at || 0) < 3600e3) return;
+      try { const f = await ghGet("learn/cards.json"); if (!f) return;
+        if (bank && bank.sha === f.sha) { bank.at = Date.now(); LS.set("wolf.learn", bank); return; }
+        const j = JSON.parse(unb64(f.content)); bank = { sha: f.sha, cards: j.cards, subjects: j.subjects, at: Date.now() }; LS.set("wolf.learn", bank); build(); render(true); } catch {}
+    }
+    function build() {
+      if (!bank) { order = []; return; }
+      const r = rnd(seed());
+      let pool = bank.cards.filter((c) => filter === "all" || (filter === "saved" ? saved.includes(c.id) : c.s === filter));
+      if (filter === "saved") { order = pool; return; }
+      const bySub = {}; pool.forEach((c) => (bySub[c.s] = bySub[c.s] || []).push(c));
+      Object.values(bySub).forEach((arr) => { arr.sort((a, b) => (seen[a.id] ? 1 : 0) - (seen[b.id] ? 1 : 0) || r() - 0.5); });
+      const subs = Object.keys(bySub); order = [];
+      let i = 0; while (subs.some((k) => bySub[k].length)) { const k = subs[i % subs.length]; if (bySub[k].length) order.push(bySub[k].shift()); i++; }
+      // unseen first across the whole feed, subjects still interleaved
+      order.sort((a, b) => (seen[a.id] ? 1 : 0) - (seen[b.id] ? 1 : 0));
+    }
+    function card(c) {
+      const el = document.createElement("article"); el.className = "lcard"; el.dataset.id = c.id;
+      const sub = (bank.subjects && bank.subjects[c.s]) || c.s; const isSaved = saved.includes(c.id);
+      el.innerHTML = `<div class="ls"><span>${sub}</span><span>${seen[c.id] ? "" : "New"}</span></div><h3></h3><p class="lb"></p><p class="lw"></p><div class="la"><button class="save${isSaved ? " on" : ""}" type="button">${isSaved ? "Saved" : "Save"}</button><button class="ask" type="button">Ask</button></div>`;
+      el.querySelector("h3").textContent = c.t; el.querySelector(".lb").textContent = c.b; el.querySelector(".lw").textContent = c.w;
+      el.querySelector(".save").addEventListener("click", (e) => { const b = e.currentTarget; const i = saved.indexOf(c.id); if (i >= 0) saved.splice(i, 1); else saved.push(c.id); LS.set("wolf.learn.saved", saved); b.classList.toggle("on", i < 0); b.textContent = i < 0 ? "Saved" : "Save"; SFX.play("tick"); });
+      el.querySelector(".ask").addEventListener("click", () => { $("#askInput").value = `Tell me more: ${c.t}`; show("ask"); setTimeout(() => $("#askInput").focus(), 50); });
+      return el;
+    }
+    function render(reset) {
+      if (reset) { feed.innerHTML = ""; shown = 0; }
+      empty.hidden = !(bank == null && !store.token);
+      if (!bank) { more.hidden = true; return; }
+      const next = order.slice(shown, shown + PAGE); next.forEach((c) => feed.appendChild(card(c))); shown += next.length;
+      more.hidden = shown >= order.length; if (filter === "saved" && !order.length) { const p = document.createElement("p"); p.className = "mini"; p.textContent = "Nothing saved yet."; feed.appendChild(p); }
+      watch();
+    }
+    function watch() {
+      if (!("IntersectionObserver" in window)) return;
+      if (io) io.disconnect();
+      io = new IntersectionObserver((es) => es.forEach((e) => {
+        if (!e.isIntersecting) return;
+        if (e.target === $("#feedEnd")) { if (!more.hidden) render(false); return; }
+        const id = e.target.dataset.id; if (id && !seen[id]) { seen[id] = today(); LS.set("wolf.learn.seen", seen); }
+      }), { threshold: 0.6 });
+      feed.querySelectorAll(".lcard").forEach((el) => io.observe(el)); io.observe($("#feedEnd"));
+    }
+    function chipsRender() {
+      const subs = Object.assign({ all: "All" }, (bank && bank.subjects) || { body: "Body", world: "World", mind: "Mind", craft: "Craft" }, { saved: "Saved" });
+      chips.innerHTML = ""; Object.entries(subs).forEach(([k, label]) => { const b = document.createElement("button"); b.className = "chip" + (filter === k ? " on" : ""); b.type = "button"; b.textContent = label; b.addEventListener("click", () => { filter = k; chipsRender(); build(); render(true); SFX.play("click"); scrollTo({ top: 0 }); }); chips.appendChild(b); });
+    }
+    more.addEventListener("click", () => render(false));
+    function open() { chipsRender(); build(); render(true); refresh(); }
+    return { open, refresh };
+  })();
 
   /* ---------- settings ---------- */
   const sheet = $("#sheet"), scrim = $("#sheetScrim");

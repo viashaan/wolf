@@ -25,8 +25,8 @@ window.PLAN = {
       why: "Roughly five hours clear of bed." },
     { id: "gym",      label: "Gym",                   icon: "dumbbell", from: 5, weekly: 3,
       why: "Aim for every second day, three a week. 17:30 to 19:00, then dinner. Week one: two sets, four reps shy of failure." },
-    { id: "phone",    label: "Phone out of the bedroom", icon: "phoneoff",
-      why: "On charge outside the room by 22:30. The one that decides bedtime." },
+    { id: "phone",    label: "No screens",            icon: "phoneoff",
+      why: "Phone, laptop and TV off from 22:30. The one that decides bedtime." },
     { id: "brainrot", label: "Brainrot under 45 min", icon: "brain", minutes: true, limit: 45,
       why: "Instagram minutes from Screen Time. The brain runs on your 7-day average." },
     { id: "bed",      label: "Bed by 23:30",          icon: "moon",     time: true,  core: true, defaultTime: "23:30",
@@ -71,7 +71,7 @@ window.PLAN = {
     ]},
     { from: 5, to: 14, title: "Days 5 to 14", lines: [
       "10 to 20 minutes outside within an hour of waking. Every day. This holds everything.",
-      "Phone on charge outside the bedroom at 22:30. Hot shower, then bed.",
+      "No screens from 22:30. Hot shower, then bed.",
       "Gym starts: two sessions this week, two sets, four reps shy of failure. Three a week after.",
       "Caffeine cutoff moves to 14:00.",
       "Check in every night before the phone goes away."

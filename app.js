@@ -3,7 +3,7 @@
   "use strict";
   const P = window.PLAN;
   const $ = (s) => document.querySelector(s);
-  const VERSION = "6.9";
+  const VERSION = "7.0";
   try { const qs = new URLSearchParams(location.search); if (/^\d{4}-\d{2}-\d{2}$/.test(qs.get("start") || "")) P.start = qs.get("start"); } catch {}
 
   /* ---------- dates ---------- */
@@ -179,7 +179,7 @@
     }
     return n ? d / n : null;
   }
-  const short = { wake: "Up", sun: "Sun", water: "Water", vits: "Vits", breakfast: "Food", coffee11: "Coffee", caff: "Caffeine", nic: "Nicotine", gym: "Gym", phone: "Phone", brainrot: "Brainrot", bed: "Bed" };
+  const short = { wake: "Up", sun: "Sun", water: "Water", vits: "Vits", breakfast: "Food", coffee11: "Coffee", caff: "Caffeine", nic: "Nicotine", gym: "Gym", phone: "Screens", brainrot: "Brainrot", bed: "Bed" };
   function renderGrid() {
     const host = $("#hgrid"); host.innerHTML = "";
     P.habits.forEach((h) => {

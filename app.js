@@ -3,7 +3,7 @@
   "use strict";
   const P = window.PLAN;
   const $ = (s) => document.querySelector(s);
-  const VERSION = "7.3";
+  const VERSION = "7.4";
   try { const qs = new URLSearchParams(location.search); if (/^\d{4}-\d{2}-\d{2}$/.test(qs.get("start") || "")) P.start = qs.get("start"); } catch {}
 
   /* ---------- dates ---------- */
@@ -176,10 +176,12 @@
   const plate = $("#plate");
   function setPlate(n, dim) { plate.style.backgroundImage = `url(img/bg/${pad(n)}.webp)`; plate.classList.toggle("dim", !!dim); }
 
+  // Same window as the wolf: the last 7 days, with today joining once something is ticked.
   function habitScore(id) {
     const t = today(); let d = 0, n = 0;
-    for (let date = P.start; date <= t; date = addDays(date, 1)) {
-      if (date === t && !touched(t)) continue;
+    for (let i = P.wolf.window - 1; i >= 0; i--) {
+      const date = addDays(t, -i); if (dayIndex(date) < 1) continue;
+      if (i === 0 && !touched(t)) continue;
       const h = due(date).find((x) => x.id === id); if (!h) continue;
       n++; if (metOn(h, date)) d++;
     }
@@ -326,7 +328,7 @@ Today so far: ${c.done} of ${c.total} habits done.
 ${rows}
 ${yl}
 Last ${k} logged days: ${k ? Math.round((sum / k) * 100) + "% average completion" : "nothing logged yet"}. Check-in streak: ${streak()} nights. Wolf: ${P.stages[stageOf(wolfScore()) - 1]} (${Math.round(wolfScore() * 100)}%).
-Weakest habits so far: ${misses || "no data yet"}.
+Weakest habits, last 7 days: ${misses || "no data yet"}.
 Brainrot 7-day average: ${bm == null ? "no minutes logged" : Math.round(bm) + " min a day"}.
 ${plans[t] && plans[t].items.length ? `Today's to-do list, from his voice note last night: ${plans[t].items.map((i) => i.t + (i.d ? " (done)" : "")).join("; ")}.` : "No to-do list voice-noted for today."}
 Commitments: no alcohol, no cigarettes since 15 Sept. Pouches allowed with an 18:00 cutoff until the week 4 decision.`;

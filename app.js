@@ -3,7 +3,7 @@
   "use strict";
   const P = window.PLAN;
   const $ = (s) => document.querySelector(s);
-  const VERSION = "7.1";
+  const VERSION = "7.2";
   try { const qs = new URLSearchParams(location.search); if (/^\d{4}-\d{2}-\d{2}$/.test(qs.get("start") || "")) P.start = qs.get("start"); } catch {}
 
   /* ---------- dates ---------- */
@@ -625,7 +625,7 @@ Commitments: no alcohol, no cigarettes since 15 Sept. Pouches allowed with an 18
   const PLAN = (() => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     const sheet = $("#planSheet"), scrim = $("#planScrim"), mic = $("#planMic"), txt = $("#planText"), status = $("#planStatus"), list = $("#planList");
-    let rec = null, recording = false, restarts = 0, failed = false, target = null;
+    let rec = null, recording = false, failed = false, target = null;
     // Before noon it is a plan for today (forgot last night). Otherwise it is for tomorrow; after midnight today() is still last night.
     const targetDate = () => { const h = clockHour(); return h >= (P.dayRollHour || 4) && h < 12 ? today() : addDays(today(), 1); };
     const dayName = (d) => d === today() ? "Today" : fmtDate(d, { weekday: "long" });
@@ -635,8 +635,8 @@ Commitments: no alcohol, no cigarettes since 15 Sept. Pouches allowed with an 18
     function open() {
       target = targetDate(); const p = plans[target];
       $("#planTitle").textContent = dayName(target);
-      txt.value = p ? p.raw : ""; paintList(p); failed = false;
-      status.textContent = p ? "Saved. Talk again to add more." : SR ? "Tap and talk" : "Tap the mic on your keyboard and talk";
+      txt.value = p ? p.raw : ""; paintList(p); failed = !!LS.get("wolf.srFail", false);
+      status.textContent = p ? "Saved. Talk again to add more." : SR && !failed ? "Tap and talk" : "Tap the mic on your keyboard and talk";
       $("#planSave").textContent = "Save"; paintMic();
       sheet.hidden = false; scrim.hidden = false; SFX.play("click", { gain: 0.6 });
     }
@@ -645,17 +645,27 @@ Commitments: no alcohol, no cigarettes since 15 Sept. Pouches allowed with an 18
     // Live dictation where the browser has it; the keyboard mic is the fallback that always works on iOS.
     function start() {
       if (!SR || failed) { txt.focus(); status.textContent = "Tap the mic on your keyboard and talk"; return; }
-      restarts = 0; recording = true; paintMic(); status.textContent = "Listening"; listen();
+      LS.set("wolf.srFail", true);   // cleared on the first word heard; survives a frozen app
+      recording = true; paintMic(); status.textContent = "Listening"; listen();
     }
+    // iOS home-screen apps can stall the recogniser without ever firing an event. A watchdog ends it:
+    // nothing heard at all in 7 s means it does not work here, so fall back to the keyboard mic for good;
+    // a 6 s silence after some words just ends the take, and whatever was heard stays in the box.
+    let dog = null, heard = false, last = 0;
     function listen() {
+      heard = false; last = Date.now();
       rec = new SR(); rec.lang = navigator.language || "en-NZ"; rec.continuous = true; rec.interimResults = true;
       const before = txt.value.trim();
-      rec.onresult = (e) => { let s = ""; for (let i = 0; i < e.results.length; i++) s += e.results[i][0].transcript; txt.value = (before ? before + " " : "") + s.trim(); };
-      rec.onerror = (e) => { if (e.error === "no-speech" || e.error === "aborted") return; failed = true; recording = false; paintMic(); txt.focus(); status.textContent = "Tap the mic on your keyboard instead"; };
-      rec.onend = () => { if (recording && !failed && restarts++ < 30) { try { listen(); return; } catch {} } recording = false; paintMic(); if (!failed) status.textContent = txt.value.trim() ? "Got it. Save, or talk again." : "Tap and talk"; };
-      try { rec.start(); } catch { failed = true; recording = false; paintMic(); txt.focus(); status.textContent = "Tap the mic on your keyboard instead"; }
+      rec.onresult = (e) => { if (!heard) LS.set("wolf.srFail", false); heard = true; last = Date.now(); let s = ""; for (let i = 0; i < e.results.length; i++) s += e.results[i][0].transcript; txt.value = (before ? before + " " : "") + s.trim(); };
+      rec.onerror = (e) => { if (e.error === "no-speech" || e.error === "aborted") return; giveUp(); };
+      rec.onend = () => { if (recording) end(); };
+      clearInterval(dog); dog = setInterval(() => { if (!recording) { clearInterval(dog); return; } const quiet = Date.now() - last; if (!heard && quiet > 7000) giveUp(); else if (heard && quiet > 6000) end(); }, 500);
+      try { rec.start(); } catch { giveUp(); }
     }
-    function stop() { recording = false; paintMic(); if (rec) { try { rec.stop(); } catch {} } }
+    function kill() { clearInterval(dog); if (rec) { const r = rec; rec = null; r.onresult = r.onerror = r.onend = null; try { r.abort(); } catch {} } }
+    function end() { recording = false; kill(); paintMic(); status.textContent = txt.value.trim() ? "Got it. Save, or tap to add more." : "Tap and talk"; }
+    function giveUp() { failed = true; recording = false; kill(); paintMic(); status.textContent = "Tap the mic on your keyboard instead"; txt.focus(); }
+    function stop() { if (recording) end(); else kill(); }
 
     // Claude turns the ramble into a short list; without a key or signal it splits on sentences.
     const roughSplit = (raw) => raw.split(/[\n.!?;]+|\band then\b|\balso\b/i).map((x) => x.trim().replace(/^((and|then|so|um|uh|like|ok|okay),?\s+)+/i, "").replace(/\s+(and|then|so)$/i, "")).filter((x) => x.length > 2).map((x) => x[0].toUpperCase() + x.slice(1));

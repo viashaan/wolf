@@ -14,7 +14,7 @@
 <link rel="icon" href="img/icon-180.png">
 <link rel="preload" href="fonts/fraunces-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/archivo-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="styles.css?v=52">
+<link rel="stylesheet" href="styles.css?v=53">
 </head>
 <body>
 <!--
@@ -56,6 +56,8 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     </div>
     <button class="btn primary wide" id="btnTonight" hidden>Check in for tonight</button>
     <p class="mini" id="homeMini"></p>
+    <div class="today" id="todayCard" hidden></div>
+    <button class="btn wide" id="btnTomorrow" hidden>Plan tomorrow</button>
     <div class="hgrid-wrap">
       <h2 class="h">Habits</h2>
       <div class="hgrid" id="hgrid"></div>
@@ -157,8 +159,31 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     <p class="night-label" id="nightLabel">day streak</p>
     <div class="week" id="nightWeek"></div>
     <p class="night-msg" id="nightMsg"></p>
+    <button class="btn wide night-plan" id="nightPlan">Plan tomorrow</button>
     <button class="btn dark wide" id="nightClose">Sleep well</button>
   </div>
+</section>
+
+<!-- MORNING: last night's voice note, read back -->
+<section class="night" id="morning" hidden aria-label="Today">
+  <div class="night-inner">
+    <p class="night-label">Today</p>
+    <ol class="morning-list" id="morningList"></ol>
+    <button class="btn wide night-plan" id="morningPlay">Read it out</button>
+    <button class="btn dark wide" id="morningClose">Got it</button>
+  </div>
+</section>
+
+<!-- PLAN TOMORROW: voice note before bed -->
+<div class="scrim-layer plan-scrim" id="planScrim" hidden></div>
+<section class="sheet plan-sheet" id="planSheet" hidden aria-label="Tomorrow">
+  <div class="sheet-handle" aria-hidden="true"></div>
+  <h2 class="sheet-title" id="planTitle">Tomorrow</h2>
+  <button type="button" class="mic" id="planMic" aria-label="Record"></button>
+  <p class="sheet-status plan-status" id="planStatus">Tap and talk</p>
+  <textarea class="plan-text" id="planText" rows="4" placeholder="Or tap the mic on your keyboard" autocapitalize="sentences" aria-label="What you need to do"></textarea>
+  <ul class="plan-list" id="planList"></ul>
+  <div class="sheet-row"><button class="btn primary" id="planSave">Save</button><button class="btn ghost" id="planClose">Close</button></div>
 </section>
 
 <!-- SETTINGS -->
@@ -189,7 +214,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
   <div class="sheet-row"><button class="btn" id="btnUpdate">Check for update</button><button class="btn ghost" id="btnClose">Close</button></div>
 </section>
 
-<script src="config.js?v=52"></script>
-<script src="app.js?v=52"></script>
+<script src="config.js?v=53"></script>
+<script src="app.js?v=53"></script>
 </body>
 </html>

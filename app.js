@@ -3,7 +3,7 @@
   "use strict";
   const P = window.PLAN;
   const $ = (s) => document.querySelector(s);
-  const VERSION = "7.0";
+  const VERSION = "7.1";
   try { const qs = new URLSearchParams(location.search); if (/^\d{4}-\d{2}-\d{2}$/.test(qs.get("start") || "")) P.start = qs.get("start"); } catch {}
 
   /* ---------- dates ---------- */
@@ -25,6 +25,9 @@
   };
   const store = { days: LS.get("wolf2.days", {}), token: LS.get("wolf.token", ""), pending: LS.get("wolf2.pending", []), lastSync: LS.get("wolf2.lastSync", null), sound: LS.get("wolf.sound", true), akey: LS.get("wolf.akey", "") };
   const persist = () => { LS.set("wolf2.days", store.days); LS.set("wolf.token", store.token); LS.set("wolf2.pending", store.pending); LS.set("wolf2.lastSync", store.lastSync); LS.set("wolf.sound", store.sound); LS.set("wolf.akey", store.akey); };
+  // Tomorrow's list, voice-noted before bed: { "YYYY-MM-DD": { date, raw, items: [{ t, d }], at, seen } }
+  const plans = LS.get("wolf.plans", {});
+  const savePlans = () => { const cut = addDays(today(), -14); Object.keys(plans).forEach((k) => { if (k < cut) delete plans[k]; }); LS.set("wolf.plans", plans); };
 
   /* ---------- sound ---------- */
   // Eight cues. Played through <audio> elements, not Web Audio: on iOS media elements ignore the
@@ -137,6 +140,9 @@
     phoneoff: '<rect x="5.5" y="2" width="9" height="16" rx="2.2"/><rect x="8.5" y="14.6" width="3" height="1.2" rx=".6" fill="#141210"/><path d="M2.5 17.5l15-15" stroke="#141210" stroke-width="3.4" stroke-linecap="round"/><path d="M2.5 17.5l15-15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
     brain: '<path d="M9.3 3a3 3 0 0 0-2.9 2.2A3 3 0 0 0 4 9.6a3 3 0 0 0 1.4 4.7A3 3 0 0 0 9.3 17h.4V3zM10.7 3v14h.4a3 3 0 0 0 3.9-2.7A3 3 0 0 0 16 9.6a3 3 0 0 0-2.4-4.4A3 3 0 0 0 10.7 3z"/>',
     moon: '<path d="M16 12.6A6.6 6.6 0 0 1 7.4 4a6.6 6.6 0 1 0 8.6 8.6z"/>',
+    mic: '<rect x="7" y="2.5" width="6" height="10" rx="3"/><path d="M4.5 9.5a5.5 5.5 0 0 0 11 0M10 15v2.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/>',
+    stop: '<rect x="5" y="5" width="10" height="10" rx="2.2"/>',
+    speaker: '<path d="M3 7.5h3l4-3.5v12l-4-3.5H3z"/><path d="M13 7a4 4 0 0 1 0 6M15.2 4.8a7 7 0 0 1 0 10.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" fill="none"/>',
     tick: '<path d="M3 8.6l3.1 3.1L13 4.9"/>',
     chev: '<path d="M4.5 7.5L10 13l5.5-5.5"/>'
   };
@@ -210,6 +216,7 @@
     $("#btnTonight").hidden = !open;
     $("#homeMini").hidden = open;
     $("#homeMini").textContent = r && r.checkedIn ? "Checked in. Sleep well." : c.total ? `Today ${c.done} of ${c.total}` : "";
+    PLAN.paintHome(evening);
     $("#grain").style.opacity = (0.30 + (1 - score) * 0.18).toFixed(2);
   }
 
@@ -320,6 +327,7 @@ ${yl}
 Last ${k} logged days: ${k ? Math.round((sum / k) * 100) + "% average completion" : "nothing logged yet"}. Check-in streak: ${streak()} nights. Wolf: ${P.stages[stageOf(wolfScore()) - 1]} (${Math.round(wolfScore() * 100)}%).
 Weakest habits so far: ${misses || "no data yet"}.
 Brainrot 7-day average: ${bm == null ? "no minutes logged" : Math.round(bm) + " min a day"}.
+${plans[t] && plans[t].items.length ? `Today's to-do list, from his voice note last night: ${plans[t].items.map((i) => i.t + (i.d ? " (done)" : "")).join("; ")}.` : "No to-do list voice-noted for today."}
 Commitments: no alcohol, no cigarettes since 15 Sept. Pouches allowed with an 18:00 cutoff until the week 4 decision.`;
     }
 
@@ -613,6 +621,113 @@ Commitments: no alcohol, no cigarettes since 15 Sept. Pouches allowed with an 18
     return { open, refresh };
   })();
 
+  /* ---------- tomorrow: voice note before bed, read back in the morning ---------- */
+  const PLAN = (() => {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const sheet = $("#planSheet"), scrim = $("#planScrim"), mic = $("#planMic"), txt = $("#planText"), status = $("#planStatus"), list = $("#planList");
+    let rec = null, recording = false, restarts = 0, failed = false, target = null;
+    // Before noon it is a plan for today (forgot last night). Otherwise it is for tomorrow; after midnight today() is still last night.
+    const targetDate = () => { const h = clockHour(); return h >= (P.dayRollHour || 4) && h < 12 ? today() : addDays(today(), 1); };
+    const dayName = (d) => d === today() ? "Today" : fmtDate(d, { weekday: "long" });
+    const paintMic = () => { mic.innerHTML = svg(recording ? "stop" : "mic"); mic.classList.toggle("rec", recording); mic.setAttribute("aria-label", recording ? "Stop" : "Record"); };
+    const paintList = (p) => { list.innerHTML = ""; (p ? p.items : []).forEach((i) => { const li = document.createElement("li"); li.textContent = i.t; list.appendChild(li); }); };
+
+    function open() {
+      target = targetDate(); const p = plans[target];
+      $("#planTitle").textContent = dayName(target);
+      txt.value = p ? p.raw : ""; paintList(p); failed = false;
+      status.textContent = p ? "Saved. Talk again to add more." : SR ? "Tap and talk" : "Tap the mic on your keyboard and talk";
+      $("#planSave").textContent = "Save"; paintMic();
+      sheet.hidden = false; scrim.hidden = false; SFX.play("click", { gain: 0.6 });
+    }
+    function close() { stop(); sheet.hidden = true; scrim.hidden = true; }
+
+    // Live dictation where the browser has it; the keyboard mic is the fallback that always works on iOS.
+    function start() {
+      if (!SR || failed) { txt.focus(); status.textContent = "Tap the mic on your keyboard and talk"; return; }
+      restarts = 0; recording = true; paintMic(); status.textContent = "Listening"; listen();
+    }
+    function listen() {
+      rec = new SR(); rec.lang = navigator.language || "en-NZ"; rec.continuous = true; rec.interimResults = true;
+      const before = txt.value.trim();
+      rec.onresult = (e) => { let s = ""; for (let i = 0; i < e.results.length; i++) s += e.results[i][0].transcript; txt.value = (before ? before + " " : "") + s.trim(); };
+      rec.onerror = (e) => { if (e.error === "no-speech" || e.error === "aborted") return; failed = true; recording = false; paintMic(); txt.focus(); status.textContent = "Tap the mic on your keyboard instead"; };
+      rec.onend = () => { if (recording && !failed && restarts++ < 30) { try { listen(); return; } catch {} } recording = false; paintMic(); if (!failed) status.textContent = txt.value.trim() ? "Got it. Save, or talk again." : "Tap and talk"; };
+      try { rec.start(); } catch { failed = true; recording = false; paintMic(); txt.focus(); status.textContent = "Tap the mic on your keyboard instead"; }
+    }
+    function stop() { recording = false; paintMic(); if (rec) { try { rec.stop(); } catch {} } }
+
+    // Claude turns the ramble into a short list; without a key or signal it splits on sentences.
+    const roughSplit = (raw) => raw.split(/[\n.!?;]+|\band then\b|\balso\b/i).map((x) => x.trim().replace(/^((and|then|so|um|uh|like|ok|okay),?\s+)+/i, "").replace(/\s+(and|then|so)$/i, "")).filter((x) => x.length > 2).map((x) => x[0].toUpperCase() + x.slice(1));
+    async function tidy(raw) {
+      if (!store.akey || !navigator.onLine) return roughSplit(raw);
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-api-key": store.akey, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
+        body: JSON.stringify({ model: (P.ask && P.ask.model) || "claude-opus-5", max_tokens: 800, output_config: { effort: "low" },
+          system: "Turn Shaan's voice note into his to-do list for the day. Return ONLY a JSON array of strings. One task per item, in the order he said them, short (under 9 words), starting with a verb, in his own words. Keep any times, names and numbers exactly. Drop filler, repeats and thinking out loud. Never use an em dash. No markdown.",
+          messages: [{ role: "user", content: raw }] })
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const j = await res.json(); const out = (j.content || []).filter((b) => b.type === "text").map((b) => b.text).join("");
+      const arr = JSON.parse(out.slice(out.indexOf("["), out.lastIndexOf("]") + 1));
+      return arr.map(String).map((x) => x.trim()).filter(Boolean);
+    }
+    async function save() {
+      stop(); const raw = txt.value.trim(); if (!raw) { status.textContent = "Nothing to save yet"; return; }
+      const btn = $("#planSave"); btn.disabled = true; btn.textContent = "Saving"; status.textContent = "Tidying it up";
+      let items; try { items = await tidy(raw); } catch { items = roughSplit(raw); }
+      const old = plans[target]; const was = new Set(old ? old.items.filter((i) => i.d).map((i) => i.t) : []);
+      plans[target] = { date: target, raw, items: items.map((t) => ({ t, d: was.has(t) })), at: Date.now(), seen: target === today() };
+      savePlans(); sync(target); paintList(plans[target]);
+      btn.disabled = false; btn.textContent = "Saved"; status.textContent = `${items.length} thing${items.length === 1 ? "" : "s"} for ${target === today() ? "today" : dayName(target)}`;
+      SFX.play("checkin"); renderHome();
+    }
+    function sync(date) { clearTimeout(sync.t); sync.t = setTimeout(() => { if (store.token && navigator.onLine && plans[date]) ghPut(`plans/${date}.json`, plans[date], `wolf plan: ${date}`).catch(() => {}); }, 1200); }
+
+    // Home: the list as a tickable card all day, and a way in at night.
+    function paintHome(evening) {
+      const t = today(); const p = plans[t]; const card = $("#todayCard");
+      card.hidden = !(p && p.items.length);
+      if (!card.hidden) {
+        card.innerHTML = `<div class="today-head"><h2>Today</h2><button type="button" data-act="say" aria-label="Read it out">${svg("speaker")}</button></div>` +
+          p.items.map((i, k) => `<button type="button" class="ti${i.d ? " done" : ""}" data-k="${k}" aria-pressed="${i.d}"><span class="h-box">${svg("tick", 16, 2.4)}</span><span class="ti-t"></span></button>`).join("");
+        card.querySelectorAll(".ti-t").forEach((el, k) => { el.textContent = p.items[k].t; });
+      }
+      const nxt = plans[addDays(t, 1)]; const b = $("#btnTomorrow");
+      b.hidden = !evening; b.textContent = nxt ? `Tomorrow · ${nxt.items.length}` : "Plan tomorrow";
+    }
+    $("#todayCard").addEventListener("click", (e) => {
+      const p = plans[today()]; if (!p) return;
+      if (e.target.closest("[data-act=say]")) { say(p.items.filter((i) => !i.d)); return; }
+      const b = e.target.closest(".ti"); if (!b) return; const i = p.items[+b.dataset.k];
+      i.d = !i.d; savePlans(); sync(today()); b.classList.toggle("done", i.d); b.setAttribute("aria-pressed", i.d);
+      SFX.play(i.d ? "tick" : "untick");
+    });
+
+    function say(items) {
+      if (!("speechSynthesis" in window)) return; speechSynthesis.cancel();
+      const text = items.length ? `${items.length === 1 ? "One thing" : items.length + " things"} today. ` + items.map((i) => i.t.replace(/\.$/, "")).join(". ") + "." : "All done today.";
+      const u = new SpeechSynthesisUtterance(text); u.rate = 1; u.lang = navigator.language || "en-NZ"; speechSynthesis.speak(u);
+    }
+
+    // Morning: the first open of the day shows last night's list once.
+    function maybeMorning() {
+      const h = clockHour(); const p = plans[today()];
+      if (!p || p.seen || !p.items.length || h < (P.dayRollHour || 4) || h >= 15) return;
+      const ol = $("#morningList"); ol.innerHTML = ""; p.items.forEach((i) => { const li = document.createElement("li"); li.textContent = i.t; ol.appendChild(li); });
+      $("#morning").hidden = false;
+    }
+    $("#morningPlay").addEventListener("click", () => { const p = plans[today()]; if (p) say(p.items); });
+    $("#morningClose").addEventListener("click", () => { const p = plans[today()]; if (p) { p.seen = true; savePlans(); sync(today()); } if ("speechSynthesis" in window) speechSynthesis.cancel(); $("#morning").hidden = true; });
+
+    mic.addEventListener("click", () => recording ? stop() : start());
+    txt.addEventListener("input", () => { $("#planSave").textContent = "Save"; });
+    $("#planSave").addEventListener("click", save); $("#planClose").addEventListener("click", close); scrim.addEventListener("click", close);
+    $("#btnTomorrow").addEventListener("click", open); $("#nightPlan").addEventListener("click", open);
+    return { paintHome, maybeMorning };
+  })();
+
   /* ---------- settings ---------- */
   const sheet = $("#sheet"), scrim = $("#sheetScrim");
   const openSheet = () => { sheet.hidden = false; scrim.hidden = false; $("#fToken").value = store.token; $("#fKey").value = store.akey; flush(); };
@@ -640,7 +755,8 @@ Commitments: no alcohol, no cigarettes since 15 Sept. Pouches allowed with an 18
 
   /* ---------- boot ---------- */
   const startView = (location.hash || "#home").slice(1);
-  renderAll(); show(startView);
+  renderAll(); show(startView); PLAN.maybeMorning();
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) PLAN.maybeMorning(); });
   if (store.token) { setSync("ok", store.lastSync ? `Synced ${new Date(store.lastSync).toLocaleString([], { hour: "2-digit", minute: "2-digit", day: "numeric", month: "short" })}` : "Connected"); flush(); } else setSync("", "Not connected");
   let lastDay = today(); setInterval(() => { if (today() !== lastDay) { lastDay = today(); viewDate = today(); renderAll(); } }, 60000);
   if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));

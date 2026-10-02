@@ -3,7 +3,7 @@
   "use strict";
   const P = window.PLAN;
   const $ = (s) => document.querySelector(s);
-  const VERSION = "7.2";
+  const VERSION = "7.3";
   try { const qs = new URLSearchParams(location.search); if (/^\d{4}-\d{2}-\d{2}$/.test(qs.get("start") || "")) P.start = qs.get("start"); } catch {}
 
   /* ---------- dates ---------- */
@@ -231,9 +231,10 @@
     $("#hDone").textContent = `${c.done} of ${c.total}`; $("#hBar").style.width = Math.round(c.r * 100) + "%";
     const host = $("#habitList"); const openIds = new Set([...host.querySelectorAll(".habit.open")].map((e) => e.dataset.id)); host.innerHTML = "";
     list.forEach((h) => {
-      const met = metOn(h, d);
-      const el = document.createElement("div"); el.className = "habit" + (met ? " done" : "") + (openIds.has(h.id) ? " open" : ""); el.dataset.id = h.id;
-      const time = h.time && r.times[h.id] ? `<span class="h-time">${r.times[h.id]}</span>` : "";
+      // A weekly habit can be met without today's tick (target already hit this week). The box only shows his own tick, so it can always be unticked.
+      const met = metOn(h, d); const ticked = h.minutes ? met : !!r.done[h.id]; const covered = met && !ticked;
+      const el = document.createElement("div"); el.className = "habit" + (ticked ? " done" : "") + (covered ? " covered" : "") + (openIds.has(h.id) ? " open" : ""); el.dataset.id = h.id;
+      const time = h.time && r.times[h.id] ? `<span class="h-time">${r.times[h.id]}</span>` : covered ? `<span class="h-time">${h.weekly} this week, rest day</span>` : "";
       const right = h.minutes ? `<input type="number" class="h-min" data-min="1" inputmode="numeric" min="0" max="900" placeholder="min" value="${r.ig ?? ""}" aria-label="Minutes">` : `<span class="h-box">${svg("tick", 16, 2.4)}</span>`;
       el.innerHTML = `<div class="habit-head">
           <${h.minutes ? "div" : "button type=\"button\""} class="habit-row" ${h.minutes ? "" : `data-act="toggle" aria-pressed="${r.done[h.id] ? "true" : "false"}"`}>
@@ -504,7 +505,7 @@ Commitments: no alcohol, no cigarettes since 15 Sept. Pouches allowed with an 18
     if (btn.dataset.act === "more") { el.classList.toggle("open"); SFX.play("click", { gain: 0.6 }); return; }
     r.done[id] = !r.done[id]; r.updated = Date.now(); persist(); queue(viewDate);
     const h = P.habits.find((x) => x.id === id);
-    el.classList.toggle("done", metOn(h, viewDate)); btn.setAttribute("aria-pressed", r.done[id] ? "true" : "false");
+    if (h.weekly) renderHabits(); else { el.classList.toggle("done", metOn(h, viewDate)); btn.setAttribute("aria-pressed", r.done[id] ? "true" : "false"); }
     const c = completion(viewDate); $("#hDone").textContent = `${c.done} of ${c.total}`; $("#hBar").style.width = Math.round(c.r * 100) + "%";
     // the pop rises as the day fills: 0.95 at the first tick to ~1.14 at the last (accumulation family)
     if (r.done[id]) { SFX.play("tick", { rate: 0.95 + 0.19 * (c.total > 1 ? (c.done - 1) / (c.total - 1) : 1) }); if (c.done === c.total) SFX.play("complete", { delay: 0.18 }); }

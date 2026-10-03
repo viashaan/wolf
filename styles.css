@@ -385,3 +385,12 @@ input[type="number"]::-webkit-inner-spin-button{-webkit-appearance:none}
 .plan-list li{padding-left:14px;position:relative;font-size:15px;color:var(--bone)}
 .plan-list li::before{content:"";position:absolute;left:0;top:.6em;width:5px;height:5px;border-radius:50%;background:var(--golden)}
 .habit.covered .h-icon{color:var(--golden)}
+.ti-row{display:flex;align-items:center}
+.ti-row .ti{flex:1;min-width:0}
+.ti-x{flex:0 0 36px;height:40px;display:grid;place-items:center;color:var(--ash-2);margin-right:-8px;opacity:.7}
+.ti-x svg{width:16px;height:16px}
+.ti-add{display:flex;align-items:center;gap:8px;margin-top:4px;padding-top:6px;border-top:1px solid var(--line)}
+.ti-add input{flex:1;min-width:0;min-height:40px;background:transparent;border:0;color:var(--bone);font:inherit;font-size:16px;outline:none}
+.ti-add input::placeholder{color:var(--ash-2)}
+.ti-add button{flex:0 0 36px;height:36px;border-radius:10px;display:grid;place-items:center;color:var(--golden);margin-right:-6px}
+.ti-add button svg{width:20px;height:20px}

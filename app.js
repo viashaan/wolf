@@ -3,7 +3,7 @@
   "use strict";
   const P = window.PLAN;
   const $ = (s) => document.querySelector(s);
-  const VERSION = "7.4";
+  const VERSION = "7.5";
   try { const qs = new URLSearchParams(location.search); if (/^\d{4}-\d{2}-\d{2}$/.test(qs.get("start") || "")) P.start = qs.get("start"); } catch {}
 
   /* ---------- dates ---------- */
@@ -144,9 +144,11 @@
     stop: '<rect x="5" y="5" width="10" height="10" rx="2.2"/>',
     speaker: '<path d="M3 7.5h3l4-3.5v12l-4-3.5H3z"/><path d="M13 7a4 4 0 0 1 0 6M15.2 4.8a7 7 0 0 1 0 10.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" fill="none"/>',
     tick: '<path d="M3 8.6l3.1 3.1L13 4.9"/>',
+    x: '<path d="M5.5 5.5l9 9M14.5 5.5l-9 9"/>',
+    plus: '<path d="M10 4.5v11M4.5 10h11"/>',
     chev: '<path d="M4.5 7.5L10 13l5.5-5.5"/>'
   };
-  const STROKE = new Set(["tick", "chev"]);
+  const STROKE = new Set(["tick", "chev", "x", "plus"]);
   const svg = (k, vb = 20, sw = 1.5) => STROKE.has(k) ? `<svg viewBox="0 0 ${vb} ${vb}" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[k]}</svg>` : `<svg viewBox="0 0 ${vb} ${vb}" fill="currentColor" aria-hidden="true">${I[k]}</svg>`;
 
   /* ---------- art crossfade ---------- */
@@ -330,7 +332,7 @@ ${yl}
 Last ${k} logged days: ${k ? Math.round((sum / k) * 100) + "% average completion" : "nothing logged yet"}. Check-in streak: ${streak()} nights. Wolf: ${P.stages[stageOf(wolfScore()) - 1]} (${Math.round(wolfScore() * 100)}%).
 Weakest habits, last 7 days: ${misses || "no data yet"}.
 Brainrot 7-day average: ${bm == null ? "no minutes logged" : Math.round(bm) + " min a day"}.
-${plans[t] && plans[t].items.length ? `Today's to-do list, from his voice note last night: ${plans[t].items.map((i) => i.t + (i.d ? " (done)" : "")).join("; ")}.` : "No to-do list voice-noted for today."}
+${plans[t] && plans[t].items.length ? `Today's to-do list (voice notes and adds; unticked items carry to the next day): ${plans[t].items.map((i) => i.t + (i.d ? " (done)" : i.c ? ` (carried over ${i.c} day${i.c > 1 ? "s" : ""})` : "")).join("; ")}.` : "No to-do list for today."}
 Commitments: no alcohol, no cigarettes since 15 Sept. Pouches allowed with an 18:00 cutoff until the week 4 decision.`;
     }
 
@@ -638,8 +640,8 @@ Commitments: no alcohol, no cigarettes since 15 Sept. Pouches allowed with an 18
     function open() {
       target = targetDate(); const p = plans[target];
       $("#planTitle").textContent = dayName(target);
-      txt.value = p ? p.raw : ""; paintList(p); failed = !!LS.get("wolf.srFail", false);
-      status.textContent = p ? "Saved. Talk again to add more." : SR && !failed ? "Tap and talk" : "Tap the mic on your keyboard and talk";
+      txt.value = ""; paintList(p); failed = !!LS.get("wolf.srFail", false);
+      status.textContent = p && p.items.length ? "Talk to add more" : SR && !failed ? "Tap and talk" : "Tap the mic on your keyboard and talk";
       $("#planSave").textContent = "Save"; paintMic();
       sheet.hidden = false; scrim.hidden = false; SFX.play("click", { gain: 0.6 });
     }
@@ -690,32 +692,70 @@ Commitments: no alcohol, no cigarettes since 15 Sept. Pouches allowed with an 18
       stop(); const raw = txt.value.trim(); if (!raw) { status.textContent = "Nothing to save yet"; return; }
       const btn = $("#planSave"); btn.disabled = true; btn.textContent = "Saving"; status.textContent = "Tidying it up";
       let items; try { items = await tidy(raw); } catch { items = roughSplit(raw); }
-      const old = plans[target]; const was = new Set(old ? old.items.filter((i) => i.d).map((i) => i.t) : []);
-      plans[target] = { date: target, raw, items: items.map((t) => ({ t, d: was.has(t) })), at: Date.now(), seen: target === today() };
-      savePlans(); sync(target); paintList(plans[target]);
-      btn.disabled = false; btn.textContent = "Saved"; status.textContent = `${items.length} thing${items.length === 1 ? "" : "s"} for ${target === today() ? "today" : dayName(target)}`;
+      if (target === today()) carry();
+      const fresh = !plans[target] || !plans[target].items.length;
+      const n = addTo(target, items); const q = plans[target]; q.raw = (q.raw ? q.raw + "\n" : "") + raw;
+      if (fresh && target !== today()) q.seen = false;
+      savePlans(); sync(target); paintList(q); txt.value = "";
+      btn.disabled = false; btn.textContent = "Saved"; status.textContent = `Added ${n}. ${q.items.length} for ${target === today() ? "today" : dayName(target)}`;
       SFX.play("checkin"); renderHome();
     }
-    function sync(date) { clearTimeout(sync.t); sync.t = setTimeout(() => { if (store.token && navigator.onLine && plans[date]) ghPut(`plans/${date}.json`, plans[date], `wolf plan: ${date}`).catch(() => {}); }, 1200); }
+    const timers = {};
+    function sync(date) { clearTimeout(timers[date]); timers[date] = setTimeout(() => { if (store.token && navigator.onLine && plans[date]) ghPut(`plans/${date}.json`, plans[date], `wolf plan: ${date}`).catch(() => {}); }, 1200); }
 
-    // Home: the list as a tickable card all day, and a way in at night.
-    function paintHome(evening) {
-      const t = today(); const p = plans[t]; const card = $("#todayCard");
-      card.hidden = !(p && p.items.length);
-      if (!card.hidden) {
-        card.innerHTML = `<div class="today-head"><h2>Today</h2><button type="button" data-act="say" aria-label="Read it out">${svg("speaker")}</button></div>` +
-          p.items.map((i, k) => `<button type="button" class="ti${i.d ? " done" : ""}" data-k="${k}" aria-pressed="${i.d}"><span class="h-box">${svg("tick", 16, 2.4)}</span><span class="ti-t"></span></button>`).join("");
-        card.querySelectorAll(".ti-t").forEach((el, k) => { el.textContent = p.items[k].t; });
-      }
-      const nxt = plans[addDays(t, 1)]; const b = $("#btnTomorrow");
-      b.hidden = !evening; b.textContent = nxt ? `Tomorrow · ${nxt.items.length}` : "Plan tomorrow";
+    // Same task said two ways ("Contact the assistant editor" / "Look for an assistant editor") counts once.
+    const STOP = new Set(["the", "and", "for", "with", "that", "this", "about", "from", "into", "what", "have", "make", "sure", "out", "get", "got", "sent", "send"]);
+    const words = (t) => new Set(t.toLowerCase().replace(/'s\b/g, "").replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter((w) => w.length > 2 && !STOP.has(w)));
+    const same = (a, b) => { const A = words(a), B = words(b); let n = 0; A.forEach((w) => { if (B.has(w)) n++; }); return n >= 2 ? n / Math.min(A.size, B.size) >= 0.5 : A.size > 0 && n === A.size && n === B.size; };
+    const has = (items, t) => items.some((i) => same(i.t, t));
+    const blankPlan = (d) => ({ date: d, raw: "", items: [], at: Date.now(), seen: true, carried: false });
+    const forDate = (d) => (plans[d] ||= blankPlan(d));
+
+    // Anything not ticked on the last list rolls into today's, once, at the top. c counts the days it has rolled.
+    function carry() {
+      const t = today(); const p = plans[t]; if (p && p.carried) return;
+      const prev = Object.keys(plans).filter((k) => k < t && plans[k].items.length).sort().pop();
+      const left = prev ? plans[prev].items.filter((i) => !i.d) : [];
+      if (!p && !left.length) return;
+      const q = forDate(t); const add = left.filter((i) => !has(q.items, i.t)).map((i) => ({ t: i.t, d: false, c: (i.c || 0) + 1 }));
+      q.items = [...add, ...q.items]; q.carried = true; if (add.length && !p) q.seen = false;
+      savePlans(); sync(t);
     }
-    $("#todayCard").addEventListener("click", (e) => {
+    function addTo(d, list) {
+      const q = forDate(d); let n = 0;
+      list.forEach((t) => { if (!has(q.items, t)) { q.items.push({ t, d: false }); n++; } });
+      q.at = Date.now(); savePlans(); sync(d); return n;
+    }
+
+    // Home: today's list, always there. Tick, add, remove. Unticked items sit above ticked ones.
+    function paintHome(evening) {
+      carry();
+      const t = today(); const p = plans[t]; const host = $("#todayList"); const items = p ? p.items : [];
+      const order = items.map((i, k) => k).sort((a, b) => (items[a].d - items[b].d) || (a - b));
+      host.innerHTML = order.map((k) => `<div class="ti-row${items[k].d ? " done" : ""}"><button type="button" class="ti${items[k].d ? " done" : ""}" data-k="${k}" aria-pressed="${items[k].d}"><span class="h-box">${svg("tick", 16, 2.4)}</span><span class="ti-t"></span></button><button type="button" class="ti-x" data-x="${k}" aria-label="Remove">${svg("x", 20, 1.6)}</button></div>`).join("");
+      host.querySelectorAll(".ti").forEach((el) => { el.querySelector(".ti-t").textContent = items[+el.dataset.k].t; });
+      const left = items.filter((i) => !i.d).length; const sayBtn = $("#todaySay");
+      sayBtn.hidden = !left; sayBtn.innerHTML = svg("speaker");
+      $("#todayAddBtn").innerHTML = svg("plus", 20, 1.8);
+      const nxt = plans[addDays(t, 1)]; const b = $("#btnTomorrow");
+      b.hidden = !evening; b.textContent = nxt && nxt.items.length ? `Tomorrow · ${nxt.items.length}` : "Plan tomorrow";
+    }
+    $("#todayList").addEventListener("click", (e) => {
       const p = plans[today()]; if (!p) return;
-      if (e.target.closest("[data-act=say]")) { say(p.items.filter((i) => !i.d)); return; }
+      const x = e.target.closest("[data-x]");
+      if (x) { p.items.splice(+x.dataset.x, 1); savePlans(); sync(today()); SFX.play("untick"); renderHome(); return; }
       const b = e.target.closest(".ti"); if (!b) return; const i = p.items[+b.dataset.k];
-      i.d = !i.d; savePlans(); sync(today()); b.classList.toggle("done", i.d); b.setAttribute("aria-pressed", i.d);
-      SFX.play(i.d ? "tick" : "untick");
+      i.d = !i.d; savePlans(); sync(today()); SFX.play(i.d ? "tick" : "untick");
+      b.classList.add(i.d ? "done" : "undone"); setTimeout(renderHome, 260);
+    });
+    $("#todaySay").addEventListener("click", () => { const p = plans[today()]; if (p) say(p.items.filter((i) => !i.d)); });
+    // One typed or dictated line goes straight in; a long ramble gets split into tasks by Claude.
+    $("#todayAdd").addEventListener("submit", async (e) => {
+      e.preventDefault(); const inp = $("#todayInput"); const raw = inp.value.trim(); if (!raw) return; inp.value = "";
+      const long = raw.split(/\s+/).length > 12 || /[.!?;]\s+\S/.test(raw);
+      let list = [raw.replace(/[.\s]+$/, "").replace(/^./, (c) => c.toUpperCase())];
+      if (long) { inp.placeholder = "Tidying it up"; try { list = await tidy(raw); } catch { list = roughSplit(raw); } inp.placeholder = "Add a to-do"; }
+      carry(); addTo(today(), list); SFX.play("tick"); renderHome();
     });
 
     function say(items) {
@@ -726,12 +766,12 @@ Commitments: no alcohol, no cigarettes since 15 Sept. Pouches allowed with an 18
 
     // Morning: the first open of the day shows last night's list once.
     function maybeMorning() {
-      const h = clockHour(); const p = plans[today()];
+      carry(); const h = clockHour(); const p = plans[today()];
       if (!p || p.seen || !p.items.length || h < (P.dayRollHour || 4) || h >= 15) return;
-      const ol = $("#morningList"); ol.innerHTML = ""; p.items.forEach((i) => { const li = document.createElement("li"); li.textContent = i.t; ol.appendChild(li); });
+      const ol = $("#morningList"); ol.innerHTML = ""; p.items.filter((i) => !i.d).forEach((i) => { const li = document.createElement("li"); li.textContent = i.t; ol.appendChild(li); });
       $("#morning").hidden = false;
     }
-    $("#morningPlay").addEventListener("click", () => { const p = plans[today()]; if (p) say(p.items); });
+    $("#morningPlay").addEventListener("click", () => { const p = plans[today()]; if (p) say(p.items.filter((i) => !i.d)); });
     $("#morningClose").addEventListener("click", () => { const p = plans[today()]; if (p) { p.seen = true; savePlans(); sync(today()); } if ("speechSynthesis" in window) speechSynthesis.cancel(); $("#morning").hidden = true; });
 
     mic.addEventListener("click", () => recording ? stop() : start());

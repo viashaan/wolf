@@ -14,7 +14,7 @@
 <link rel="icon" href="img/icon-180.png">
 <link rel="preload" href="fonts/fraunces-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/archivo-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="styles.css?v=56">
+<link rel="stylesheet" href="styles.css?v=57">
 </head>
 <body>
 <!--
@@ -56,7 +56,11 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     </div>
     <button class="btn primary wide" id="btnTonight" hidden>Check in for tonight</button>
     <p class="mini" id="homeMini"></p>
-    <div class="today" id="todayCard" hidden></div>
+    <div class="today" id="todayCard">
+      <div class="today-head"><h2>Today</h2><button type="button" id="todaySay" aria-label="Read it out" hidden></button></div>
+      <div id="todayList"></div>
+      <form class="ti-add" id="todayAdd" autocomplete="off"><input id="todayInput" type="text" placeholder="Add a to-do" autocapitalize="sentences" enterkeyhint="done" aria-label="Add a to-do"><button type="submit" id="todayAddBtn" aria-label="Add"></button></form>
+    </div>
     <button class="btn wide" id="btnTomorrow" hidden>Plan tomorrow</button>
     <div class="hgrid-wrap">
       <h2 class="h">Habits</h2>
@@ -214,7 +218,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
   <div class="sheet-row"><button class="btn" id="btnUpdate">Check for update</button><button class="btn ghost" id="btnClose">Close</button></div>
 </section>
 
-<script src="config.js?v=56"></script>
-<script src="app.js?v=56"></script>
+<script src="config.js?v=57"></script>
+<script src="app.js?v=57"></script>
 </body>
 </html>
